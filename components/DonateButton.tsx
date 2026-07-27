@@ -1,4 +1,4 @@
-const DONATE_URL = process.env.NEXT_PUBLIC_DONATE_URL || "https://ko-fi.com/";
+const DONATE_URL = process.env.NEXT_PUBLIC_DONATE_URL || "https://ko-fi.com/luc389442";
 
 export default function DonateButton() {
   return (
