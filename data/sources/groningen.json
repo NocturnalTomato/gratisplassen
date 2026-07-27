@@ -1,0 +1,59 @@
+{
+  "sourceId": "groningen",
+  "fetchedAt": "2026-07-27",
+  "endpoints": [
+    "https://services-eu1.arcgis.com/h3O43YQQl5FOo5XH/arcgis/rest/services/Openbare_toiletten_aan_de_diepenring/FeatureServer"
+  ],
+  "license": "Gemeente Groningen open data",
+  "recordCount": 4,
+  "locations": [
+    {
+      "id": "groningen-1",
+      "name": "Openbaar urinoir Hoge der A",
+      "type": "openbaar",
+      "address": "Hoge der A",
+      "lat": 53.2185607402954,
+      "lon": 6.55826761967297,
+      "paid": false,
+      "priceHint": null,
+      "wheelchair": false,
+      "source": "Gemeente Groningen open data (ArcGIS: \"Openbare toiletten aan de diepenring\", https://services-eu1.arcgis.com/h3O43YQQl5FOo5XH/arcgis/rest/services/Openbare_toiletten_aan_de_diepenring/FeatureServer)"
+    },
+    {
+      "id": "groningen-2",
+      "name": "Openbaar urinoir Kleine der A",
+      "type": "openbaar",
+      "address": "Kleine der A",
+      "lat": 53.2157494098252,
+      "lon": 6.55948574777962,
+      "paid": false,
+      "priceHint": null,
+      "wheelchair": false,
+      "source": "Gemeente Groningen open data (ArcGIS: \"Openbare toiletten aan de diepenring\", https://services-eu1.arcgis.com/h3O43YQQl5FOo5XH/arcgis/rest/services/Openbare_toiletten_aan_de_diepenring/FeatureServer)"
+    },
+    {
+      "id": "groningen-3",
+      "name": "Openbaar urinoir Schuitendiep",
+      "type": "openbaar",
+      "address": "Schuitendiep",
+      "lat": 53.2171364275174,
+      "lon": 6.57412085584839,
+      "paid": false,
+      "priceHint": null,
+      "wheelchair": false,
+      "source": "Gemeente Groningen open data (ArcGIS: \"Openbare toiletten aan de diepenring\", https://services-eu1.arcgis.com/h3O43YQQl5FOo5XH/arcgis/rest/services/Openbare_toiletten_aan_de_diepenring/FeatureServer)"
+    },
+    {
+      "id": "groningen-4",
+      "name": "Openbaar urinoir Schuitendiep",
+      "type": "openbaar",
+      "address": "Schuitendiep",
+      "lat": 53.2187919709943,
+      "lon": 6.57273454475284,
+      "paid": false,
+      "priceHint": null,
+      "wheelchair": false,
+      "source": "Gemeente Groningen open data (ArcGIS: \"Openbare toiletten aan de diepenring\", https://services-eu1.arcgis.com/h3O43YQQl5FOo5XH/arcgis/rest/services/Openbare_toiletten_aan_de_diepenring/FeatureServer)"
+    }
+  ]
+}

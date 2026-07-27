@@ -10,6 +10,11 @@
     "seed:osm": "node scripts/fetch-osm-toilets.mjs",
     "seed:osm-fastfood": "node scripts/fetch-osm-fastfood.mjs",
     "seed:osm-fuel": "node scripts/fetch-osm-fuel-toilets.mjs",
+    "seed:opendata-hogenood": "node scripts/fetch-opendata-hogenood.mjs",
+    "seed:opendata-amsterdam": "node scripts/fetch-opendata-amsterdam.mjs",
+    "seed:opendata-groningen": "node scripts/fetch-opendata-groningen.mjs",
+    "seed:opendata-nijmegen": "node scripts/fetch-opendata-nijmegen.mjs",
+    "seed:opendata-denhaag": "node scripts/fetch-opendata-denhaag.mjs",
     "enrich:addresses": "node scripts/enrich-addresses.mjs"
   },
   "dependencies": {
