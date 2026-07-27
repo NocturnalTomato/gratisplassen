@@ -137,8 +137,10 @@ export default function Home() {
       <header className="border-b border-rose-100 bg-white px-4 py-4">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-rose-600">🚺 Gratis Plassen</h1>
-            <p className="text-sm text-gray-500">Vind een damestoilet bij jou in de buurt — gratis of betaald.</p>
+            <h1 className="text-2xl font-black text-rose-600">🚽 Gratis Plassen</h1>
+            <p className="text-sm text-gray-500">
+              Vind een toilet met een wc om op te zitten (geen urinoir) bij jou in de buurt — gratis of betaald.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button

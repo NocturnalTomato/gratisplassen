@@ -3,7 +3,7 @@ import { checkBebouwdeKom, heuristiekOpAfstand } from "@/lib/bebouwdeKom";
 import { reverseGeocode } from "@/lib/pdok";
 
 /**
- * Fallback-endpoint: als er geen (dames)toilet in de buurt is, geven we
+ * Fallback-endpoint: als er geen toilet met een wc (geen urinoir) in de buurt is, geven we
  * informatief aan of wildplassen op deze plek waarschijnlijk wel/niet mag
  * (buiten de bebouwde kom = meestal toegestaan). Geen juridisch advies.
  */

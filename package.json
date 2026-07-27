@@ -9,7 +9,8 @@
     "lint": "next lint",
     "seed:osm": "node scripts/fetch-osm-toilets.mjs",
     "seed:osm-fastfood": "node scripts/fetch-osm-fastfood.mjs",
-    "seed:osm-fuel": "node scripts/fetch-osm-fuel-toilets.mjs"
+    "seed:osm-fuel": "node scripts/fetch-osm-fuel-toilets.mjs",
+    "enrich:addresses": "node scripts/enrich-addresses.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

@@ -1,6 +1,6 @@
-# 🚺 Gratis Plassen
+# 🚽 Gratis Plassen
 
-Vind een (dames)toilet bij je in de buurt — gratis of betaald — met reviews
+Vind een toilet met een wc om op te zitten (geen urinoir) bij je in de buurt — gratis of betaald — met reviews
 over schoonheid, wc-papier, handen wassen, maandverband/tampon-automaat en
 douche. Als er niets dichtbij is, laat de site ook zien of wildplassen op die
 plek waarschijnlijk wel/niet mag (geen juridisch advies).
@@ -47,6 +47,19 @@ Zet dus altijd `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` voordat je live gaat
   `npm run seed:osm > data/locations.osm.json` (buiten deze sandbox — het
   netwerk hier staat overpass-api.de niet toe) en voeg het resultaat samen
   met `data/locations.json`.
+
+## Ontbrekende adressen aanvullen
+
+De meeste OSM-toiletten hebben geen `addr:street`-tag, dus staat `address`
+voor die locaties op `null` (zichtbaar op de kaart, maar zonder adres in de
+lijst/detailweergave). Draai `npm run enrich:addresses` (buiten deze sandbox
+— het netwerk hier staat api.pdok.nl niet toe) om die aan te vullen via
+reverse geocoding op de gratis PDOK Locatieserver. Het script schrijft
+`data/locations.json` in place, slaat elke 50 locaties tussentijds op zodat
+een onderbroken run hervat kan worden, en laat `address` bewust op `null`
+staan als het dichtstbijzijnde adrespunt te ver weg ligt (>250m, bijv. bij
+toiletten op verzorgingsplaatsen) in plaats van een verkeerd adres te
+verzinnen.
 
 ## Misbruikbeperking bij reviews
 
