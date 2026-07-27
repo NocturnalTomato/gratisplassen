@@ -43,8 +43,11 @@ export default function LocationDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.id]);
 
+  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+      <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-gray-300 lg:hidden" />
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-xl font-bold">{location.name}</h2>
@@ -62,6 +65,15 @@ export default function LocationDetail({
           <span className="text-sm text-rose-600">{formatDistance(location.distanceMeters)}</span>
         )}
       </div>
+
+      <a
+        href={navUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 rounded-full bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700"
+      >
+        🧭 Navigeer hierheen
+      </a>
 
       <div className="grid grid-cols-2 gap-2 text-sm">
         {FACILITY_LABELS.map(([key, label]) => {

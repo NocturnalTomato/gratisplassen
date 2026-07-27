@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.markercluster";
 import { useEffect, useRef } from "react";
@@ -40,19 +40,38 @@ function BoundsWatcher({ onBoundsChange }: { onBoundsChange: (bounds: MapBounds)
   return null;
 }
 
-const freeIcon = new L.DivIcon({
-  className: "",
-  html: `<div style="background:#16a34a;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,.2)"></div>`,
-  iconSize: [14, 14],
-});
-const paidIcon = new L.DivIcon({
-  className: "",
-  html: `<div style="background:#d63868;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,.2)"></div>`,
-  iconSize: [14, 14],
-});
+// Google/Apple Maps style teardrop pin, rendered as an inline SVG DivIcon so
+// we can recolor and resize it per marker state without shipping image assets.
+function pinIcon(color: string, selected: boolean): L.DivIcon {
+  const w = selected ? 34 : 26;
+  const h = Math.round(w * 1.33);
+  const ring = selected ? `<circle cx="12" cy="12" r="11" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.35"/>` : "";
+  return new L.DivIcon({
+    className: "gp-pin",
+    html: `<svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))">
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="${color}"/>
+      <circle cx="12" cy="12" r="5.5" fill="white"/>
+      ${ring}
+    </svg>`,
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h],
+    popupAnchor: [0, -h * 0.9],
+  });
+}
+
+const FREE_COLOR = "#16a34a";
+const PAID_COLOR = "#d63868";
+const UNKNOWN_COLOR = "#78716c";
+
+function colorFor(loc: LocationWithStats): string {
+  if (loc.paid === false) return FREE_COLOR;
+  if (loc.paid === true) return PAID_COLOR;
+  return UNKNOWN_COLOR;
+}
+
 const meIcon = new L.DivIcon({
   className: "",
-  html: `<div style="background:#2563eb;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 2px #2563eb"></div>`,
+  html: `<div style="background:#2563eb;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 0 2px #2563eb, 0 2px 6px rgba(0,0,0,.35)"></div>`,
   iconSize: [16, 16],
 });
 
@@ -64,12 +83,16 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+// Pans/zooms to a location picked from the list (or a marker click) without
+// fighting the user's own pan/zoom gestures on every render.
+function FlyToSelected({ location }: { location: { lat: number; lon: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!location) return;
+    map.flyTo([location.lat, location.lon], Math.max(map.getZoom(), 15), { duration: 0.6 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.lat, location?.lon]);
+  return null;
 }
 
 // leaflet.markercluster groups thousands of markers into small cluster
@@ -77,10 +100,12 @@ function escapeHtml(s: string): string {
 // locations are loaded (the dataset now covers all of NL, ~4000 pins).
 function ClusteredMarkers({
   locations,
+  selectedId,
   onSelect,
 }: {
   locations: LocationWithStats[];
-  onSelect: (id: string) => void;
+  selectedId: string | null;
+  onSelect: (loc: LocationWithStats) => void;
 }) {
   const map = useMap();
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
@@ -104,21 +129,16 @@ function ClusteredMarkers({
     clusterGroup.clearLayers();
 
     const markers = locations.map((loc) => {
+      const selected = loc.id === selectedId;
       const marker = L.marker([loc.lat, loc.lon], {
-        icon: loc.paid ? paidIcon : freeIcon,
+        icon: pinIcon(colorFor(loc), selected),
+        zIndexOffset: selected ? 1000 : 0,
       });
-      const starsLine =
-        loc.stats.avgStars !== null ? ` · ${loc.stats.avgStars}★` : "";
-      marker.bindPopup(
-        `<strong>${escapeHtml(loc.name)}</strong><br>${
-          loc.paid ? "Betaald" : "Gratis"
-        }${starsLine}`
-      );
-      marker.on("click", () => onSelect(loc.id));
+      marker.on("click", () => onSelect(loc));
       return marker;
     });
     clusterGroup.addLayers(markers);
-  }, [locations, onSelect]);
+  }, [locations, selectedId, onSelect]);
 
   return null;
 }
@@ -127,17 +147,18 @@ export default function MapView({
   locations,
   userPos,
   selectedId,
+  selectedLocation,
   onSelect,
   onBoundsChange,
 }: {
   locations: LocationWithStats[];
   userPos: { lat: number; lon: number } | null;
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedLocation?: { lat: number; lon: number } | null;
+  onSelect: (loc: LocationWithStats) => void;
   onBoundsChange: (bounds: MapBounds) => void;
 }) {
   const center = userPos ?? { lat: 52.1326, lon: 5.2913 };
-  void selectedId;
 
   return (
     <MapContainer
@@ -145,19 +166,22 @@ export default function MapView({
       zoom={userPos ? 14 : 7}
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
+      zoomControl={false}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bijdragers'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <ZoomControl position="bottomright" />
       <BoundsWatcher onBoundsChange={onBoundsChange} />
       {userPos && <Recenter lat={userPos.lat} lon={userPos.lon} />}
+      {selectedLocation && <FlyToSelected location={selectedLocation} />}
       {userPos && (
         <Marker position={[userPos.lat, userPos.lon]} icon={meIcon}>
           <Popup>Jouw locatie</Popup>
         </Marker>
       )}
-      <ClusteredMarkers locations={locations} onSelect={onSelect} />
+      <ClusteredMarkers locations={locations} selectedId={selectedId} onSelect={onSelect} />
     </MapContainer>
   );
 }

@@ -8,6 +8,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import LocationCard from "@/components/LocationCard";
 import LocationDetail from "@/components/LocationDetail";
 import AddLocationForm from "@/components/AddLocationForm";
+import BottomSheet from "@/components/BottomSheet";
 import type { LocationWithStats } from "@/lib/types";
 import type { MapBounds } from "@/components/MapView";
 
@@ -29,7 +30,12 @@ const LIST_LIMIT = 100;
 export default function Home() {
   const [locations, setLocations] = useState<LocationWithStats[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lon: number } | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Holds the selected location object itself, not just an id looked up in
+  // `locations` — selecting an item pans the map, which triggers a
+  // bounds-based refetch that can drop the item from the (viewport-limited)
+  // list. Deriving selection from that list would then silently close the
+  // detail panel underneath the user.
+  const [selectedLocation, setSelectedLocation] = useState<LocationWithStats | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [manualInput, setManualInput] = useState("");
@@ -59,6 +65,13 @@ export default function Home() {
       const data = await res.json();
       setLocations(data.locations ?? []);
       setStatus("done");
+      setSelectedLocation((prev) => {
+        if (!prev) return prev;
+        const refreshed = (data.locations as LocationWithStats[] | undefined)?.find(
+          (l) => l.id === prev.id
+        );
+        return refreshed ?? prev;
+      });
 
       const nearest = data.locations?.[0];
       if (lat !== undefined && lon !== undefined && (!nearest || nearest.distanceMeters > 500)) {
@@ -122,9 +135,11 @@ export default function Home() {
     }
   }
 
-  const selectedLocation = useMemo(
-    () => locations.find((l) => l.id === selectedId) ?? null,
-    [locations, selectedId]
+  const selectedId = selectedLocation?.id ?? null;
+
+  const flyTarget = useMemo(
+    () => (selectedLocation ? { lat: selectedLocation.lat, lon: selectedLocation.lon } : null),
+    [selectedLocation]
   );
 
   const listedLocations = useMemo(
@@ -132,96 +147,130 @@ export default function Home() {
     [locations]
   );
 
+  const list = (
+    <>
+      {status === "loading" && <p className="text-sm text-gray-400">Laden…</p>}
+      <div className="flex flex-col gap-2">
+        {listedLocations.map((loc) => (
+          <LocationCard
+            key={loc.id}
+            location={loc}
+            selected={loc.id === selectedId}
+            onClick={() => setSelectedLocation(loc)}
+          />
+        ))}
+      </div>
+      {locations.length > LIST_LIMIT && (
+        <p className="mt-2 text-center text-xs text-gray-400">
+          {listedLocations.length} van {locations.length} getoond — zoom in op de kaart voor meer.
+        </p>
+      )}
+    </>
+  );
+
   return (
-    <main className="flex min-h-screen flex-col">
-      <header className="border-b border-rose-100 bg-white px-4 py-4">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-rose-600">🚽 Gratis Plassen</h1>
-            <p className="text-sm text-gray-500">
-              Vind een toilet met een wc om op te zitten (geen urinoir) bij jou in de buurt — gratis of betaald.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={useMyLocation}
-              className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
-            >
-              📍 Gebruik mijn locatie
-            </button>
-            <form onSubmit={submitManual} className="flex gap-2">
-              <input
-                value={manualInput}
-                onChange={(e) => setManualInput(e.target.value)}
-                placeholder="of typ een adres/plaats"
-                className="rounded-full border border-gray-300 px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                className="rounded-full border border-rose-300 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-              >
-                Zoek
-              </button>
-            </form>
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-rose-50">
+      {/* Map fills the whole screen; `isolate` contains Leaflet's internal
+          z-index:1000 controls so they never escape and float above the
+          floating panels/sheets/modals stacked on top of it. */}
+      <div className="absolute inset-0 z-0 isolate">
+        <MapView
+          locations={locations}
+          userPos={userPos}
+          selectedId={selectedId}
+          selectedLocation={flyTarget}
+          onSelect={setSelectedLocation}
+          onBoundsChange={handleBoundsChange}
+        />
+      </div>
+
+      {/* Floating top bar */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3 sm:p-4">
+        <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
             <button
               onClick={() => setShowAddForm(true)}
-              className="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+              className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 sm:text-sm"
             >
               ➕ Toilet toevoegen
             </button>
           </div>
-        </div>
-        {errorMsg && <p className="mx-auto mt-2 max-w-6xl text-sm text-red-600">{errorMsg}</p>}
-      </header>
-
-      {wildplasCheck && (
-        <div
-          className={`mx-auto mt-3 w-full max-w-6xl rounded-lg px-4 py-2 text-sm ${
-            wildplasCheck.magWaarschijnlijk ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800"
-          }`}
-        >
-          Geen toilet vlakbij. {wildplasCheck.uitleg} (geen juridisch advies)
-        </div>
-      )}
-
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
-        <div className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[380px]">
-          {status === "loading" && <p className="text-sm text-gray-400">Laden…</p>}
-          {listedLocations.map((loc) => (
-            <LocationCard
-              key={loc.id}
-              location={loc}
-              selected={loc.id === selectedId}
-              onClick={() => setSelectedId(loc.id)}
-            />
-          ))}
-          {locations.length > LIST_LIMIT && (
-            <p className="text-center text-xs text-gray-400">
-              {listedLocations.length} van {locations.length} getoond — zoom in op de kaart voor meer.
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={useMyLocation}
+              className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 sm:text-sm"
+            >
+              📍 Gebruik mijn locatie
+            </button>
+            <form onSubmit={submitManual} className="flex flex-1 min-w-[180px] gap-2">
+              <input
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                placeholder="of typ een adres/plaats"
+                className="w-full min-w-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs sm:text-sm"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 sm:text-sm"
+              >
+                Zoek
+              </button>
+            </form>
+          </div>
+          {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
+          {wildplasCheck && (
+            <div
+              className={`rounded-lg px-3 py-2 text-xs ${
+                wildplasCheck.magWaarschijnlijk ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800"
+              }`}
+            >
+              Geen toilet vlakbij. {wildplasCheck.uitleg} (geen juridisch advies)
+            </div>
           )}
-        </div>
-
-        <div className="relative order-1 h-[70vh] w-full overflow-hidden rounded-xl border border-gray-200 lg:order-2 lg:flex-1">
-          <MapView
-            locations={locations}
-            userPos={userPos}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onBoundsChange={handleBoundsChange}
-          />
         </div>
       </div>
 
+      {/* Desktop floating list panel */}
+      <div className="absolute bottom-4 left-4 top-24 z-10 hidden w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-lg lg:flex">
+        <div className="border-b border-gray-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-700">
+            {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld
+          </h2>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3">
+          {list}
+          <p className="mt-3 text-center text-[11px] leading-snug text-gray-400">
+            Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter
+            plekke. Geen account nodig; anonieme reviews met beperkte snelheid.
+          </p>
+        </div>
+      </div>
+
+      {/* Mobile bottom sheet */}
+      <BottomSheet
+        header={
+          <h2 className="text-sm font-semibold text-gray-700">
+            {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld
+          </h2>
+        }
+      >
+        {list}
+        <p className="mt-3 text-center text-[11px] leading-snug text-gray-400">
+          Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter
+          plekke. Geen account nodig; anonieme reviews met beperkte snelheid.
+        </p>
+      </BottomSheet>
+
       {selectedLocation && (
-        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setSelectedId(null)}>
+        <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setSelectedLocation(null)}>
           <div
-            className="h-full w-full max-w-md bg-white shadow-xl"
+            className="max-h-[90vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
             onClick={(e) => e.stopPropagation()}
           >
             <LocationDetail
               location={selectedLocation}
-              onClose={() => setSelectedId(null)}
+              onClose={() => setSelectedLocation(null)}
               onReviewSubmitted={() => loadLocations(userPos?.lat, userPos?.lon)}
             />
           </div>
@@ -229,9 +278,9 @@ export default function Home() {
       )}
 
       {showAddForm && (
-        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setShowAddForm(false)}>
+        <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setShowAddForm(false)}>
           <div
-            className="h-full w-full max-w-md bg-white shadow-xl"
+            className="max-h-[90vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
             onClick={(e) => e.stopPropagation()}
           >
             <AddLocationForm
@@ -241,11 +290,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      <footer className="mt-auto border-t border-gray-100 px-4 py-6 text-center text-xs text-gray-400">
-        Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter plekke.
-        Geen account nodig; anonieme reviews met beperkte snelheid om misbruik tegen te gaan.
-      </footer>
     </main>
   );
 }
