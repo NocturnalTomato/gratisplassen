@@ -48,6 +48,19 @@ Zet dus altijd `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` voordat je live gaat
   netwerk hier staat overpass-api.de niet toe) en voeg het resultaat samen
   met `data/locations.json`.
 
+## Ontbrekende adressen aanvullen
+
+De meeste OSM-toiletten hebben geen `addr:street`-tag, dus staat `address`
+voor die locaties op `null` (zichtbaar op de kaart, maar zonder adres in de
+lijst/detailweergave). Draai `npm run enrich:addresses` (buiten deze sandbox
+— het netwerk hier staat api.pdok.nl niet toe) om die aan te vullen via
+reverse geocoding op de gratis PDOK Locatieserver. Het script schrijft
+`data/locations.json` in place, slaat elke 50 locaties tussentijds op zodat
+een onderbroken run hervat kan worden, en laat `address` bewust op `null`
+staan als het dichtstbijzijnde adrespunt te ver weg ligt (>250m, bijv. bij
+toiletten op verzorgingsplaatsen) in plaats van een verkeerd adres te
+verzinnen.
+
 ## Misbruikbeperking bij reviews
 
 Geen account nodig, wel:
