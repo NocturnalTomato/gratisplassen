@@ -62,3 +62,40 @@ export async function checkRateLimit(
 
   return { allowed: true };
 }
+
+const MAX_LOCATIONS_PER_HOUR_PER_IP = 5;
+const MAX_LOCATIONS_PER_DAY_PER_IP = 15;
+
+/**
+ * Zelfde soort pragmatische misbruikcheck als hierboven, maar dan voor het
+ * toevoegen van nieuwe locaties.
+ */
+export async function checkAddLocationRateLimit(
+  ipHash: string
+): Promise<RateLimitResult> {
+  const db = getDb();
+
+  const perHour = await db.execute({
+    sql: `SELECT COUNT(*) as c FROM locations WHERE ip_hash = ? AND created_at > datetime('now', '-1 hour')`,
+    args: [ipHash],
+  });
+  if (Number(perHour.rows[0]?.c ?? 0) >= MAX_LOCATIONS_PER_HOUR_PER_IP) {
+    return {
+      allowed: false,
+      reason: "Te veel locaties in korte tijd toegevoegd. Probeer het over een uur opnieuw.",
+    };
+  }
+
+  const perDay = await db.execute({
+    sql: `SELECT COUNT(*) as c FROM locations WHERE ip_hash = ? AND created_at > datetime('now', '-1 day')`,
+    args: [ipHash],
+  });
+  if (Number(perDay.rows[0]?.c ?? 0) >= MAX_LOCATIONS_PER_DAY_PER_IP) {
+    return {
+      allowed: false,
+      reason: "Je hebt vandaag al veel locaties toegevoegd. Probeer het morgen opnieuw.",
+    };
+  }
+
+  return { allowed: true };
+}

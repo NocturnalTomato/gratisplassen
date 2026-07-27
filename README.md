@@ -74,8 +74,6 @@ variables (zie `.env.example`).
    `IP_HASH_SECRET` (random string), `NEXT_PUBLIC_DONATE_URL`.
 4. Deploy.
 
-Status: Turso-database is gekoppeld via Vercel environment variables. ✅
-
 ## Bekende beperkingen (MVP)
 
 - `data/locations.json` is een klein, handmatig gecureerd startsetje

@@ -7,7 +7,7 @@ export default function DonateButton() {
       target="_blank"
       rel="noopener noreferrer"
       title="Trakteer me op een bakkie koffie"
-      className="fixed bottom-4 right-4 z-50"
+      className="fixed bottom-4 right-4 z-30"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

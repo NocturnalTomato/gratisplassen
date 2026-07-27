@@ -1,7 +1,8 @@
-// Vult data/locations.json aan met alle toiletten uit OpenStreetMap voor NL,
-// via de gratis Overpass API.
+// Vult data/locations.json aan met tankstations/verzorgingsplaatsen uit
+// OpenStreetMap voor NL die expliciet toilets=yes hebben getagd — via de
+// gratis Overpass API. Handig voor onderweg (snelweg-verzorgingsplaatsen).
 //
-// Gebruik: node scripts/fetch-osm-toilets.mjs > data/locations.osm.json
+// Gebruik: node scripts/fetch-osm-fuel-toilets.mjs > data/locations.fuel.json
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
@@ -9,8 +10,8 @@ const query = `
   [out:json][timeout:180];
   area["ISO3166-1"="NL"][admin_level=2]->.nl;
   (
-    node["amenity"="toilets"](area.nl);
-    way["amenity"="toilets"](area.nl);
+    node["amenity"="fuel"]["toilets"="yes"](area.nl);
+    way["amenity"="fuel"]["toilets"="yes"](area.nl);
   );
   out center tags;
 `;
@@ -48,9 +49,9 @@ async function main() {
     const fee = tags.fee === "yes" ? true : tags.fee === "no" ? false : null;
 
     return {
-      id: `osm-${el.type}-${el.id}`,
-      name: tags.name || "Openbaar toilet",
-      type: "osm",
+      id: `osm-fuel-${el.type}-${el.id}`,
+      name: tags.name ? `Tankstation ${tags.name}` : "Tankstation (toilet)",
+      type: "tankstation",
       address: [tags["addr:street"], tags["addr:housenumber"], tags["addr:city"]]
         .filter(Boolean)
         .join(" ") || null,
@@ -59,7 +60,7 @@ async function main() {
       paid: fee,
       priceHint: tags.charge || null,
       wheelchair: tags.wheelchair === "yes",
-      source: "OpenStreetMap (amenity=toilets)",
+      source: "OpenStreetMap (tankstation met toilets=yes)",
     };
   });
 

@@ -1,9 +1,44 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { useEffect } from "react";
+import "leaflet.markercluster";
+import { useEffect, useRef } from "react";
 import type { LocationWithStats } from "@/lib/types";
+
+export type MapBounds = {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+};
+
+function BoundsWatcher({ onBoundsChange }: { onBoundsChange: (bounds: MapBounds) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      const b = map.getBounds();
+      onBoundsChange({
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLon: b.getWest(),
+        maxLon: b.getEast(),
+      });
+    },
+  });
+
+  useEffect(() => {
+    const b = map.getBounds();
+    onBoundsChange({
+      minLat: b.getSouth(),
+      maxLat: b.getNorth(),
+      minLon: b.getWest(),
+      maxLon: b.getEast(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  return null;
+}
 
 const freeIcon = new L.DivIcon({
   className: "",
@@ -29,18 +64,80 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// leaflet.markercluster groups thousands of markers into small cluster
+// bubbles that split apart on zoom, so the map stays smooth however many
+// locations are loaded (the dataset now covers all of NL, ~4000 pins).
+function ClusteredMarkers({
+  locations,
+  onSelect,
+}: {
+  locations: LocationWithStats[];
+  onSelect: (id: string) => void;
+}) {
+  const map = useMap();
+  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
+
+  useEffect(() => {
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+    });
+    clusterRef.current = clusterGroup;
+    map.addLayer(clusterGroup);
+    return () => {
+      map.removeLayer(clusterGroup);
+      clusterRef.current = null;
+    };
+  }, [map]);
+
+  useEffect(() => {
+    const clusterGroup = clusterRef.current;
+    if (!clusterGroup) return;
+    clusterGroup.clearLayers();
+
+    const markers = locations.map((loc) => {
+      const marker = L.marker([loc.lat, loc.lon], {
+        icon: loc.paid ? paidIcon : freeIcon,
+      });
+      const starsLine =
+        loc.stats.avgStars !== null ? ` · ${loc.stats.avgStars}★` : "";
+      marker.bindPopup(
+        `<strong>${escapeHtml(loc.name)}</strong><br>${
+          loc.paid ? "Betaald" : "Gratis"
+        }${starsLine}`
+      );
+      marker.on("click", () => onSelect(loc.id));
+      return marker;
+    });
+    clusterGroup.addLayers(markers);
+  }, [locations, onSelect]);
+
+  return null;
+}
+
 export default function MapView({
   locations,
   userPos,
   selectedId,
   onSelect,
+  onBoundsChange,
 }: {
   locations: LocationWithStats[];
   userPos: { lat: number; lon: number } | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onBoundsChange: (bounds: MapBounds) => void;
 }) {
   const center = userPos ?? { lat: 52.1326, lon: 5.2913 };
+  void selectedId;
 
   return (
     <MapContainer
@@ -53,27 +150,14 @@ export default function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bijdragers'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <BoundsWatcher onBoundsChange={onBoundsChange} />
       {userPos && <Recenter lat={userPos.lat} lon={userPos.lon} />}
       {userPos && (
         <Marker position={[userPos.lat, userPos.lon]} icon={meIcon}>
           <Popup>Jouw locatie</Popup>
         </Marker>
       )}
-      {locations.map((loc) => (
-        <Marker
-          key={loc.id}
-          position={[loc.lat, loc.lon]}
-          icon={loc.paid ? paidIcon : freeIcon}
-          eventHandlers={{ click: () => onSelect(loc.id) }}
-        >
-          <Popup>
-            <strong>{loc.name}</strong>
-            <br />
-            {loc.paid ? "Betaald" : "Gratis"}
-            {loc.stats.avgStars !== null && <> · {loc.stats.avgStars}★</>}
-          </Popup>
-        </Marker>
-      ))}
+      <ClusteredMarkers locations={locations} onSelect={onSelect} />
     </MapContainer>
   );
 }

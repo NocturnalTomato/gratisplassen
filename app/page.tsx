@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import LocationCard from "@/components/LocationCard";
 import LocationDetail from "@/components/LocationDetail";
+import AddLocationForm from "@/components/AddLocationForm";
 import type { LocationWithStats } from "@/lib/types";
+import type { MapBounds } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
@@ -17,6 +21,11 @@ type WildplasCheck = {
   uitleg: string;
 } | null;
 
+// De lijst toont maximaal dit aantal — met ~4000 locaties landelijk is een
+// ongelimiteerde lijst traag en oninzichtelijk. De kaart clustert zelf en
+// kan wel de volledige set aan.
+const LIST_LIMIT = 100;
+
 export default function Home() {
   const [locations, setLocations] = useState<LocationWithStats[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lon: number } | null>(null);
@@ -25,12 +34,27 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState("");
   const [manualInput, setManualInput] = useState("");
   const [wildplasCheck, setWildplasCheck] = useState<WildplasCheck>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const boundsRef = useRef<MapBounds | null>(null);
 
   async function loadLocations(lat?: number, lon?: number) {
     setStatus("loading");
     setErrorMsg("");
     try {
-      const url = lat !== undefined ? `/api/locations?lat=${lat}&lon=${lon}` : "/api/locations";
+      const params = new URLSearchParams();
+      if (lat !== undefined && lon !== undefined) {
+        params.set("lat", String(lat));
+        params.set("lon", String(lon));
+      }
+      const bounds = boundsRef.current;
+      if (bounds) {
+        params.set("minLat", String(bounds.minLat));
+        params.set("maxLat", String(bounds.maxLat));
+        params.set("minLon", String(bounds.minLon));
+        params.set("maxLon", String(bounds.maxLon));
+      }
+      const query = params.toString();
+      const url = query ? `/api/locations?${query}` : "/api/locations";
       const res = await fetch(url);
       const data = await res.json();
       setLocations(data.locations ?? []);
@@ -54,6 +78,11 @@ export default function Home() {
   useEffect(() => {
     loadLocations();
   }, []);
+
+  function handleBoundsChange(bounds: MapBounds) {
+    boundsRef.current = bounds;
+    loadLocations(userPos?.lat, userPos?.lon);
+  }
 
   function useMyLocation() {
     if (!navigator.geolocation) {
@@ -98,6 +127,11 @@ export default function Home() {
     [locations, selectedId]
   );
 
+  const listedLocations = useMemo(
+    () => locations.slice(0, LIST_LIMIT),
+    [locations]
+  );
+
   return (
     <main className="flex min-h-screen flex-col">
       <header className="border-b border-rose-100 bg-white px-4 py-4">
@@ -127,6 +161,12 @@ export default function Home() {
                 Zoek
               </button>
             </form>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+            >
+              ➕ Toilet toevoegen
+            </button>
           </div>
         </div>
         {errorMsg && <p className="mx-auto mt-2 max-w-6xl text-sm text-red-600">{errorMsg}</p>}
@@ -143,9 +183,9 @@ export default function Home() {
       )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 lg:flex-row">
-        <div className="flex w-full flex-col gap-3 lg:w-[380px]">
+        <div className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[380px]">
           {status === "loading" && <p className="text-sm text-gray-400">Laden…</p>}
-          {locations.map((loc) => (
+          {listedLocations.map((loc) => (
             <LocationCard
               key={loc.id}
               location={loc}
@@ -153,14 +193,20 @@ export default function Home() {
               onClick={() => setSelectedId(loc.id)}
             />
           ))}
+          {locations.length > LIST_LIMIT && (
+            <p className="text-center text-xs text-gray-400">
+              {listedLocations.length} van {locations.length} getoond — zoom in op de kaart voor meer.
+            </p>
+          )}
         </div>
 
-        <div className="relative h-[70vh] w-full overflow-hidden rounded-xl border border-gray-200 lg:h-auto lg:flex-1">
+        <div className="relative order-1 h-[70vh] w-full overflow-hidden rounded-xl border border-gray-200 lg:order-2 lg:flex-1">
           <MapView
             locations={locations}
             userPos={userPos}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            onBoundsChange={handleBoundsChange}
           />
         </div>
       </div>
@@ -175,6 +221,20 @@ export default function Home() {
               location={selectedLocation}
               onClose={() => setSelectedId(null)}
               onReviewSubmitted={() => loadLocations(userPos?.lat, userPos?.lon)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showAddForm && (
+        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setShowAddForm(false)}>
+          <div
+            className="h-full w-full max-w-md bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AddLocationForm
+              onClose={() => setShowAddForm(false)}
+              onAdded={() => loadLocations(userPos?.lat, userPos?.lon)}
             />
           </div>
         </div>

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import locations from "@/data/locations.json";
 import { getDb, ensureSchema } from "@/lib/db";
 import { getRequestIpHash } from "@/lib/ipHash";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getReviewsForLocation } from "@/lib/reviewStats";
-import type { Location } from "@/lib/types";
+import { getLocationById } from "@/lib/locations";
 
 export async function GET(
   _req: NextRequest,
@@ -20,7 +19,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const location = (locations as Location[]).find((l) => l.id === params.id);
+  const location = await getLocationById(params.id);
   if (!location) {
     return NextResponse.json({ error: "Locatie niet gevonden." }, { status: 404 });
   }
