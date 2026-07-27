@@ -366,30 +366,22 @@ export default function Home() {
 
       {selectedLocation && (
         <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setSelectedLocation(null)}>
-          <div
-            className="max-h-[90vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <LocationDetail
-              location={selectedLocation}
-              onClose={() => setSelectedLocation(null)}
-              onReviewSubmitted={() => loadLocations(userPos?.lat, userPos?.lon)}
-            />
-          </div>
+          <LocationDetail
+            location={selectedLocation}
+            onClose={() => setSelectedLocation(null)}
+            onReviewSubmitted={() => loadLocations(userPos?.lat, userPos?.lon)}
+            onContainerClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
       {showAddForm && (
         <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setShowAddForm(false)}>
-          <div
-            className="max-h-[90vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AddLocationForm
-              onClose={() => setShowAddForm(false)}
-              onAdded={() => loadLocations(userPos?.lat, userPos?.lon)}
-            />
-          </div>
+          <AddLocationForm
+            onClose={() => setShowAddForm(false)}
+            onAdded={() => loadLocations(userPos?.lat, userPos?.lon)}
+            onContainerClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </main>

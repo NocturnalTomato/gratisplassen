@@ -14,9 +14,11 @@ const TYPE_OPTIONS: { value: string; label: string }[] = [
 export default function AddLocationForm({
   onClose,
   onAdded,
+  onContainerClick,
 }: {
   onClose: () => void;
   onAdded: () => void;
+  onContainerClick?: (e: React.MouseEvent) => void;
 }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("openbaar");
@@ -113,7 +115,10 @@ export default function AddLocationForm({
 
   if (status === "done") {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+      <div
+        className="flex h-full max-h-[90vh] w-full flex-col items-center justify-center gap-3 rounded-t-3xl bg-white p-4 text-center shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+        onClick={onContainerClick}
+      >
         <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
           Bedankt! Het toilet is toegevoegd.
         </p>
@@ -128,7 +133,11 @@ export default function AddLocationForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+    <form
+      onSubmit={submit}
+      onClick={onContainerClick}
+      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+    >
       <div className="flex items-start justify-between">
         <h2 className="text-xl font-bold">Toilet toevoegen</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700" aria-label="Sluiten">

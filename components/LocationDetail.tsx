@@ -22,10 +22,12 @@ export default function LocationDetail({
   location,
   onClose,
   onReviewSubmitted,
+  onContainerClick,
 }: {
   location: LocationWithStats;
   onClose: () => void;
   onReviewSubmitted?: () => void;
+  onContainerClick?: (e: React.MouseEvent) => void;
 }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,10 @@ export default function LocationDetail({
   const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+    <div
+      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+      onClick={onContainerClick}
+    >
       <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-gray-300 lg:hidden" />
       <div className="flex items-start justify-between">
         <div>
