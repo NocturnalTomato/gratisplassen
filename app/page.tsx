@@ -10,7 +10,7 @@ import LocationDetail from "@/components/LocationDetail";
 import AddLocationForm from "@/components/AddLocationForm";
 import BottomSheet from "@/components/BottomSheet";
 import type { LocationWithStats } from "@/lib/types";
-import type { MapBounds } from "@/components/MapView";
+import type { MapBounds, SearchFocus } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
@@ -27,6 +27,14 @@ type WildplasCheck = {
 // kan wel de volledige set aan.
 const LIST_LIMIT = 100;
 
+// Na "gebruik mijn locatie" of een adreszoekopdracht zoomt de kaart in op de
+// dichtstbijzijnde toiletten, maar nooit verder uit dan dit — ongeveer wat je
+// in 10 minuten kunt fietsen (~15 km/u).
+const BIKE_RADIUS_METERS = 2500;
+const SEARCH_FOCUS_COUNT = 10;
+
+type AddressSuggestion = { id: string; weergavenaam: string };
+
 export default function Home() {
   const [locations, setLocations] = useState<LocationWithStats[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lon: number } | null>(null);
@@ -41,9 +49,22 @@ export default function Home() {
   const [manualInput, setManualInput] = useState("");
   const [wildplasCheck, setWildplasCheck] = useState<WildplasCheck>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
   const boundsRef = useRef<MapBounds | null>(null);
+  const skipNextSuggestFetch = useRef(false);
+  // Bumped on every loadLocations call so a slower, older request (e.g. the
+  // unbounded fetch fired on search, before the bounds-restricted refetch it
+  // triggers indirectly) can't overwrite state with stale/out-of-order data.
+  const requestIdRef = useRef(0);
 
-  async function loadLocations(lat?: number, lon?: number) {
+  async function loadLocations(
+    lat?: number,
+    lon?: number,
+    opts?: { isSearch?: boolean }
+  ) {
+    const requestId = ++requestIdRef.current;
     setStatus("loading");
     setErrorMsg("");
     try {
@@ -63,6 +84,7 @@ export default function Home() {
       const url = query ? `/api/locations?${query}` : "/api/locations";
       const res = await fetch(url);
       const data = await res.json();
+      if (requestId !== requestIdRef.current) return;
       setLocations(data.locations ?? []);
       setStatus("done");
       setSelectedLocation((prev) => {
@@ -72,6 +94,18 @@ export default function Home() {
         );
         return refreshed ?? prev;
       });
+
+      if (opts?.isSearch && lat !== undefined && lon !== undefined) {
+        const nearby = ((data.locations as LocationWithStats[] | undefined) ?? [])
+          .filter((l) => l.distanceMeters !== null && l.distanceMeters <= BIKE_RADIUS_METERS)
+          .slice(0, SEARCH_FOCUS_COUNT);
+        setSearchFocus({
+          lat,
+          lon,
+          points: nearby.map((l) => ({ lat: l.lat, lon: l.lon })),
+          key: Date.now(),
+        });
+      }
 
       const nearest = data.locations?.[0];
       if (lat !== undefined && lon !== undefined && (!nearest || nearest.distanceMeters > 500)) {
@@ -107,7 +141,8 @@ export default function Home() {
       (pos) => {
         const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         setUserPos(p);
-        loadLocations(p.lat, p.lon);
+        boundsRef.current = null;
+        loadLocations(p.lat, p.lon, { isSearch: true });
       },
       () => {
         setErrorMsg("Kon je locatie niet ophalen. Geef toestemming, of typ hieronder een adres.");
@@ -120,6 +155,7 @@ export default function Home() {
   async function submitManual(e: React.FormEvent) {
     e.preventDefault();
     if (!manualInput.trim()) return;
+    setShowSuggestions(false);
     setStatus("loading");
     setErrorMsg("");
     try {
@@ -128,12 +164,58 @@ export default function Home() {
       const geo = await geoRes.json();
       const p = { lat: geo.lat, lon: geo.lon };
       setUserPos(p);
-      await loadLocations(p.lat, p.lon);
+      boundsRef.current = null;
+      await loadLocations(p.lat, p.lon, { isSearch: true });
     } catch {
       setErrorMsg("Kon dit adres niet vinden. Probeer een preciezer adres.");
       setStatus("error");
     }
   }
+
+  async function selectSuggestion(suggestion: AddressSuggestion) {
+    skipNextSuggestFetch.current = true;
+    setManualInput(suggestion.weergavenaam);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const res = await fetch(`/api/geocode/lookup?id=${encodeURIComponent(suggestion.id)}`);
+      if (!res.ok) throw new Error("niet gevonden");
+      const geo = await res.json();
+      const p = { lat: geo.lat, lon: geo.lon };
+      setUserPos(p);
+      boundsRef.current = null;
+      await loadLocations(p.lat, p.lon, { isSearch: true });
+    } catch {
+      setErrorMsg("Kon dit adres niet vinden. Probeer een preciezer adres.");
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    if (skipNextSuggestFetch.current) {
+      skipNextSuggestFetch.current = false;
+      return;
+    }
+    const query = manualInput.trim();
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSuggestions(data.suggestions ?? []);
+        setShowSuggestions(true);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [manualInput]);
 
   const selectedId = selectedLocation?.id ?? null;
 
@@ -179,6 +261,7 @@ export default function Home() {
           userPos={userPos}
           selectedId={selectedId}
           selectedLocation={flyTarget}
+          searchFocus={searchFocus}
           onSelect={setSelectedLocation}
           onBoundsChange={handleBoundsChange}
         />
@@ -203,11 +286,14 @@ export default function Home() {
             >
               📍 Gebruik mijn locatie
             </button>
-            <form onSubmit={submitManual} className="flex flex-1 min-w-[180px] gap-2">
+            <form onSubmit={submitManual} className="relative flex flex-1 min-w-[180px] gap-2">
               <input
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                 placeholder="of typ een adres/plaats"
+                autoComplete="off"
                 className="w-full min-w-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs sm:text-sm"
               />
               <button
@@ -216,6 +302,22 @@ export default function Home() {
               >
                 Zoek
               </button>
+              {showSuggestions && suggestions.length > 0 && (
+                <ul className="absolute left-0 right-14 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                  {suggestions.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectSuggestion(s)}
+                        className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 sm:text-sm"
+                      >
+                        {s.weergavenaam}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </form>
           </div>
           {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}

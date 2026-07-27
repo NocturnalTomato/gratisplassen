@@ -39,6 +39,47 @@ export async function geocodeAddress(
   };
 }
 
+export interface AddressSuggestion {
+  id: string;
+  weergavenaam: string;
+}
+
+export async function suggestAddresses(query: string): Promise<AddressSuggestion[]> {
+  const url = `${LOCATIESERVER_BASE}/suggest?q=${encodeURIComponent(
+    query
+  )}&rows=5&fq=type:(adres OR woonplaats OR postcode)&fl=id,weergavenaam`;
+
+  const res = await fetch(url, { next: { revalidate: 0 } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const docs = data?.response?.docs ?? [];
+  return docs
+    .filter((doc: { id?: string; weergavenaam?: string }) => doc.id && doc.weergavenaam)
+    .map((doc: { id: string; weergavenaam: string }) => ({ id: doc.id, weergavenaam: doc.weergavenaam }));
+}
+
+export async function lookupAddress(id: string): Promise<GeocodeResult | null> {
+  const url = `${LOCATIESERVER_BASE}/lookup?id=${encodeURIComponent(
+    id
+  )}&fl=weergavenaam,gemeentenaam,centroide_ll`;
+
+  const res = await fetch(url, { next: { revalidate: 0 } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const doc = data?.response?.docs?.[0];
+  if (!doc?.centroide_ll) return null;
+
+  const match = /POINT\(([-\d.]+) ([-\d.]+)\)/.exec(doc.centroide_ll);
+  if (!match) return null;
+
+  return {
+    weergavenaam: doc.weergavenaam,
+    gemeentenaam: doc.gemeentenaam ?? "",
+    lon: parseFloat(match[1]),
+    lat: parseFloat(match[2]),
+  };
+}
+
 export async function reverseGeocode(
   lat: number,
   lon: number

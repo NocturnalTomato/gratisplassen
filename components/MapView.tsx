@@ -75,14 +75,6 @@ const meIcon = new L.DivIcon({
   iconSize: [16, 16],
 });
 
-function Recenter({ lat, lon }: { lat: number; lon: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lon], map.getZoom());
-  }, [lat, lon, map]);
-  return null;
-}
-
 // Pans/zooms to a location picked from the list (or a marker click) without
 // fighting the user's own pan/zoom gestures on every render.
 function FlyToSelected({ location }: { location: { lat: number; lon: number } | null }) {
@@ -92,6 +84,34 @@ function FlyToSelected({ location }: { location: { lat: number; lon: number } | 
     map.flyTo([location.lat, location.lon], Math.max(map.getZoom(), 15), { duration: 0.6 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location?.lat, location?.lon]);
+  return null;
+}
+
+export type SearchFocus = {
+  lat: number;
+  lon: number;
+  points: { lat: number; lon: number }[];
+  key: number;
+};
+
+// Zooms to fit the toilets closest to a searched/located point after "Gebruik
+// mijn locatie" or an address search. `points` is already limited (by the
+// caller) to the nearest ones within a bikeable radius, so fitting bounds to
+// them naturally caps how far out the map zooms — it only zooms in tighter
+// when those points are close together.
+function FocusOnSearch({ focus }: { focus: SearchFocus | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!focus) return;
+    if (focus.points.length === 0) {
+      map.setView([focus.lat, focus.lon], 14);
+      return;
+    }
+    const bounds = L.latLngBounds([[focus.lat, focus.lon]]);
+    focus.points.forEach((p) => bounds.extend([p.lat, p.lon]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key]);
   return null;
 }
 
@@ -148,6 +168,7 @@ export default function MapView({
   userPos,
   selectedId,
   selectedLocation,
+  searchFocus,
   onSelect,
   onBoundsChange,
 }: {
@@ -155,6 +176,7 @@ export default function MapView({
   userPos: { lat: number; lon: number } | null;
   selectedId: string | null;
   selectedLocation?: { lat: number; lon: number } | null;
+  searchFocus?: SearchFocus | null;
   onSelect: (loc: LocationWithStats) => void;
   onBoundsChange: (bounds: MapBounds) => void;
 }) {
@@ -174,7 +196,7 @@ export default function MapView({
       />
       <ZoomControl position="bottomright" />
       <BoundsWatcher onBoundsChange={onBoundsChange} />
-      {userPos && <Recenter lat={userPos.lat} lon={userPos.lon} />}
+      {searchFocus && <FocusOnSearch focus={searchFocus} />}
       {selectedLocation && <FlyToSelected location={selectedLocation} />}
       {userPos && (
         <Marker position={[userPos.lat, userPos.lon]} icon={meIcon}>
