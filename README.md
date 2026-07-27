@@ -13,9 +13,9 @@ plek waarschijnlijk wel/niet mag (geen juridisch advies).
   Cloudflare nodig). Kan ook makkelijk naar Vercel Postgres of Neon.
 - **Leaflet** + OpenStreetMap-tiles voor de kaart (gratis, geen API key)
 - **PDOK Locatieserver** voor adres-zoeken/geocoding (gratis, geen key)
-- Locatiedata: `data/locations.json` (handmatig samengesteld startsetje) +
-  `scripts/fetch-osm-toilets.mjs` om aan te vullen met alle OSM-toiletten in
-  heel Nederland
+- Locatiedata: `data/locations.json` (10.000+ locaties), samengesteld uit een
+  klein handmatig startsetje + OpenStreetMap + open data van een aantal
+  gemeenten + HogeNood — zie [Databronnen](#databronnen) hieronder
 
 ## Herbruikte code
 
@@ -40,21 +40,54 @@ is niet persistent en reviews kunnen verdwijnen tussen deploys/instances.
 Zet dus altijd `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` voordat je live gaat
 (gratis account op [turso.tech](https://turso.tech), duurt ~2 minuten).
 
-## Meer locaties toevoegen
+## Databronnen
 
-- Handmatig: voeg een object toe aan `data/locations.json`.
-- Landelijk (heel NL, via OpenStreetMap): draai
-  `npm run seed:osm > data/locations.osm.json` (buiten deze sandbox — het
-  netwerk hier staat overpass-api.de niet toe) en voeg het resultaat samen
-  met `data/locations.json`.
+`data/locations.json` is opgebouwd uit meerdere bronnen:
+
+| Bron | Dekking | Fetch-script |
+|---|---|---|
+| Handmatig startsetje | grote steden, kleine set | — (direct bewerken) |
+| OpenStreetMap | heel NL — toiletten, fastfoodketens, tankstations, verzorgingsplaatsen, winkels | `npm run seed:osm`, `seed:osm-fastfood`, `seed:osm-fuel`, `seed:osm-restareas`, `seed:osm-shops` |
+| Gemeente Den Haag (open data) | Den Haag | `npm run seed:opendata-denhaag` |
+| Gemeente Amsterdam (open data) | Amsterdam | `npm run seed:opendata-amsterdam` |
+| Gemeente Groningen (open data) | Diepenring, alleen urinoirs | `npm run seed:opendata-groningen` |
+| Nijmegen (crowdsourced, 2012, ongeverifieerd) | Nijmegen | `npm run seed:opendata-nijmegen` |
+| HogeNood (publieke kaartdata, geen namen/adressen) | heel NL + BE | `npm run seed:opendata-hogenood` |
+
+Elke bron heeft een korte writeup (endpoint, licentie, bekende beperkingen) in
+[`docs/data-sources/`](docs/data-sources/), en een bijbehorende snapshot in
+`data/sources/<bron>.json` (met `fetchedAt`-datum) zodat je kunt zien wanneer
+er voor het laatst gesynchroniseerd is.
+
+**Een bron verversen of een nieuwe toevoegen:**
+
+1. Draai het fetch-script van de bron (bijv. `npm run seed:opendata-denhaag`),
+   schrijf de output naar `data/sources/<bron>.json` in hetzelfde
+   snapshot-formaat (`sourceId`, `fetchedAt`, `endpoints`, `license`,
+   `recordCount`, `locations`).
+2. Draai `node scripts/merge-opendata-sources.mjs`. Dit voegt alleen *nieuwe*
+   locaties toe (gededupliceerd op afstand + naam/adres-gelijkenis, zowel
+   tegen bestaande locaties als tussen de nieuwe bronnen onderling) en
+   overschrijft of verwijdert nooit bestaande entries — reviews in de database
+   verwijzen naar `location_id`, dus verwijderen kan die wees maken. Het
+   script schrijft een leesbaar rapport naar `docs/data-sources/MERGE_LOG.md`.
+3. Als een gemeente een locatie heeft ingetrokken zie je dat niet automatisch
+   terug (er wordt nooit iets verwijderd) — vergelijk zelf de oude en nieuwe
+   `data/sources/<bron>.json` (bijv. via `git diff`) en verwijder handmatig uit
+   `data/locations.json` als dat nodig is.
+
+Er is bewust geen cron/scheduled job voor deze scripts — ze worden handmatig
+gedraaid wanneer nodig.
+
+Handmatig een locatie toevoegen kan ook gewoon door een object toe te voegen
+aan `data/locations.json`.
 
 ## Ontbrekende adressen aanvullen
 
 De meeste OSM-toiletten hebben geen `addr:street`-tag, dus staat `address`
 voor die locaties op `null` (zichtbaar op de kaart, maar zonder adres in de
-lijst/detailweergave). Draai `npm run enrich:addresses` (buiten deze sandbox
-— het netwerk hier staat api.pdok.nl niet toe) om die aan te vullen via
-reverse geocoding op de gratis PDOK Locatieserver. Het script schrijft
+lijst/detailweergave). Draai `npm run enrich:addresses` om die aan te vullen
+via reverse geocoding op de gratis PDOK Locatieserver. Het script schrijft
 `data/locations.json` in place, slaat elke 50 locaties tussentijds op zodat
 een onderbroken run hervat kan worden, en laat `address` bewust op `null`
 staan als het dichtstbijzijnde adrespunt te ver weg ligt (>250m, bijv. bij
@@ -89,10 +122,13 @@ variables (zie `.env.example`).
 
 ## Bekende beperkingen (MVP)
 
-- `data/locations.json` is een klein, handmatig gecureerd startsetje
-  (voornamelijk grote steden) — geen volledige landelijke dekking. Uitbreiden
-  via het OSM-importscript of handmatig.
-- Coördinaten van het startsetje zijn op adres-/pleinniveau, niet
+- Dekking is goed in grote steden en langs snelwegen (via OSM), maar
+  wisselend in kleinere gemeenten — niet elke gemeente publiceert open
+  toiletdata (zie [`docs/data-sources/`](docs/data-sources/) voor welke
+  steden wel/niet zijn geprobeerd).
+- De Nijmegen-bron is ongeverifieerd en uit 2012 — kan verouderd zijn.
+  De HogeNood-bron heeft geen namen/adressen, alleen coördinaten + type.
+- Coördinaten van het handmatige startsetje zijn op adres-/pleinniveau, niet
   gm-nauwkeurig geverifieerd.
 - Reviews zijn door bezoekers geplaatst en niet geverifieerd door de
   toiletbeheerder — check zelf ter plekke.
