@@ -1,6 +1,6 @@
-# 🚺 Gratis Plassen
+# 🚽 Gratis Plassen
 
-Vind een (dames)toilet bij je in de buurt — gratis of betaald — met reviews
+Vind een toilet met een wc om op te zitten (geen urinoir) bij je in de buurt — gratis of betaald — met reviews
 over schoonheid, wc-papier, handen wassen, maandverband/tampon-automaat en
 douche. Als er niets dichtbij is, laat de site ook zien of wildplassen op die
 plek waarschijnlijk wel/niet mag (geen juridisch advies).
