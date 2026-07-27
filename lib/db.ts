@@ -15,9 +15,14 @@ export function getDb(): Client {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
+  // Vercel's serverless filesystem is read-only except /tmp — writing a
+  // local SQLite file only works there, not at the project-relative path
+  // used for local dev.
+  const fallbackPath = process.env.VERCEL ? "/tmp/local.db" : "./data/local.db";
+
   client = url
     ? createClient({ url, authToken })
-    : createClient({ url: "file:./data/local.db" });
+    : createClient({ url: `file:${fallbackPath}` });
 
   return client;
 }

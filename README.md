@@ -34,6 +34,12 @@ npm run dev
 Zonder `TURSO_DATABASE_URL` gebruikt de app automatisch een lokaal
 SQLite-bestand — geen setup nodig om te testen.
 
+**Let op voor productie:** zonder `TURSO_DATABASE_URL` valt de app op Vercel
+terug op `/tmp` (het enige schrijfbare pad in een serverless functie) — dat
+is niet persistent en reviews kunnen verdwijnen tussen deploys/instances.
+Zet dus altijd `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` voordat je live gaat
+(gratis account op [turso.tech](https://turso.tech), duurt ~2 minuten).
+
 ## Meer locaties toevoegen
 
 - Handmatig: voeg een object toe aan `data/locations.json`.
