@@ -10,6 +10,7 @@ import LocationDetail from "@/components/LocationDetail";
 import AddLocationForm from "@/components/AddLocationForm";
 import BottomSheet from "@/components/BottomSheet";
 import Legend from "@/components/Legend";
+import CoffeeMenu from "@/components/CoffeeMenu";
 import WelcomeModal from "@/components/WelcomeModal";
 import type { LocationWithStats } from "@/lib/types";
 import type { MapBounds, SearchFocus } from "@/components/MapView";
@@ -330,6 +331,7 @@ export default function Home() {
               <div className="flex min-w-0 items-center gap-1.5">
                 <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
                 <Legend />
+                <CoffeeMenu />
               </div>
               <button
                 onClick={openAddForm}
@@ -338,7 +340,8 @@ export default function Home() {
                 ➕ Toilet toevoegen
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+                <Legend variant="text" />
                 <button
                   onClick={useMyLocation}
                   className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 sm:text-sm"
