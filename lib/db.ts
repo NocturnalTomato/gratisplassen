@@ -37,18 +37,56 @@ export function ensureSchema(): Promise<void> {
         CREATE TABLE IF NOT EXISTS reviews (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           location_id TEXT NOT NULL,
-          stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+          stars INTEGER CHECK (stars IS NULL OR stars BETWEEN 1 AND 5),
           clean_rating INTEGER CHECK (clean_rating BETWEEN 1 AND 5),
           toilet_paper INTEGER NOT NULL DEFAULT 0,
           wash_hands INTEGER NOT NULL DEFAULT 0,
           pads_tampons INTEGER NOT NULL DEFAULT 0,
           shower INTEGER NOT NULL DEFAULT 0,
           paid INTEGER,
+          no_toilet INTEGER NOT NULL DEFAULT 0,
+          urinal_only INTEGER NOT NULL DEFAULT 0,
           comment TEXT,
           ip_hash TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
       `);
+
+      // Installs from before "geen toilet"/"alleen urinoir"-meldingen bestonden
+      // hebben een reviews-tabel zonder die kolommen en met `stars NOT NULL` —
+      // SQLite kan een CHECK/NOT NULL-constraint niet los aanpassen, dus we
+      // bouwen de tabel eenmalig opnieuw op als de nieuwe kolom ontbreekt.
+      const info = await db.execute(`PRAGMA table_info(reviews)`);
+      const hasReportColumns = info.rows.some((r) => String(r.name) === "no_toilet");
+      if (!hasReportColumns) {
+        await db.execute(`ALTER TABLE reviews RENAME TO reviews_old`);
+        await db.execute(`
+          CREATE TABLE reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            location_id TEXT NOT NULL,
+            stars INTEGER CHECK (stars IS NULL OR stars BETWEEN 1 AND 5),
+            clean_rating INTEGER CHECK (clean_rating BETWEEN 1 AND 5),
+            toilet_paper INTEGER NOT NULL DEFAULT 0,
+            wash_hands INTEGER NOT NULL DEFAULT 0,
+            pads_tampons INTEGER NOT NULL DEFAULT 0,
+            shower INTEGER NOT NULL DEFAULT 0,
+            paid INTEGER,
+            no_toilet INTEGER NOT NULL DEFAULT 0,
+            urinal_only INTEGER NOT NULL DEFAULT 0,
+            comment TEXT,
+            ip_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )
+        `);
+        await db.execute(`
+          INSERT INTO reviews
+            (id, location_id, stars, clean_rating, toilet_paper, wash_hands, pads_tampons, shower, paid, comment, ip_hash, created_at)
+          SELECT id, location_id, stars, clean_rating, toilet_paper, wash_hands, pads_tampons, shower, paid, comment, ip_hash, created_at
+          FROM reviews_old
+        `);
+        await db.execute(`DROP TABLE reviews_old`);
+      }
+
       await db.execute(
         `CREATE INDEX IF NOT EXISTS idx_reviews_location ON reviews(location_id)`
       );

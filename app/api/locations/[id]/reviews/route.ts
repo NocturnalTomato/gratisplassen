@@ -44,17 +44,42 @@ export async function POST(
     );
   }
 
-  const stars = Number(body.stars);
-  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
-    return NextResponse.json({ error: "Ongeldige sterrenscore." }, { status: 400 });
-  }
+  const reportType: "review" | "no_toilet" | "urinal_only" =
+    body.reportType === "no_toilet" || body.reportType === "urinal_only"
+      ? body.reportType
+      : "review";
+  const noToilet = reportType === "no_toilet";
+  const urinalOnly = reportType === "urinal_only";
 
-  const cleanRating =
-    body.cleanRating === null || body.cleanRating === undefined
-      ? null
-      : Number(body.cleanRating);
-  if (cleanRating !== null && (!Number.isInteger(cleanRating) || cleanRating < 1 || cleanRating > 5)) {
-    return NextResponse.json({ error: "Ongeldige schoonheidsscore." }, { status: 400 });
+  // Bij een "geen toilet"/"alleen urinoir"-melding is er niets te
+  // beoordelen — sterren, schoonheid en voorzieningen slaan dan nergens op.
+  let stars: number | null = null;
+  let cleanRating: number | null = null;
+  let toiletPaper = false;
+  let washHands = false;
+  let padsTampons = false;
+  let shower = false;
+  let paid: boolean | null = null;
+
+  if (reportType === "review") {
+    stars = Number(body.stars);
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return NextResponse.json({ error: "Ongeldige sterrenscore." }, { status: 400 });
+    }
+
+    cleanRating =
+      body.cleanRating === null || body.cleanRating === undefined
+        ? null
+        : Number(body.cleanRating);
+    if (cleanRating !== null && (!Number.isInteger(cleanRating) || cleanRating < 1 || cleanRating > 5)) {
+      return NextResponse.json({ error: "Ongeldige schoonheidsscore." }, { status: 400 });
+    }
+
+    toiletPaper = body.toiletPaper === true;
+    washHands = body.washHands === true;
+    padsTampons = body.padsTampons === true;
+    shower = body.shower === true;
+    paid = body.paid === true ? true : body.paid === false ? false : null;
   }
 
   let comment: string | null =
@@ -63,9 +88,6 @@ export async function POST(
     comment = comment.slice(0, MAX_COMMENT_LENGTH);
   }
   if (comment === "") comment = null;
-
-  const paid: boolean | null =
-    body.paid === true ? true : body.paid === false ? false : null;
 
   const ipHash = getRequestIpHash();
 
@@ -78,17 +100,19 @@ export async function POST(
   const db = getDb();
   await db.execute({
     sql: `INSERT INTO reviews
-      (location_id, stars, clean_rating, toilet_paper, wash_hands, pads_tampons, shower, paid, comment, ip_hash)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (location_id, stars, clean_rating, toilet_paper, wash_hands, pads_tampons, shower, paid, no_toilet, urinal_only, comment, ip_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       location.id,
       stars,
       cleanRating,
-      body.toiletPaper ? 1 : 0,
-      body.washHands ? 1 : 0,
-      body.padsTampons ? 1 : 0,
-      body.shower ? 1 : 0,
+      toiletPaper ? 1 : 0,
+      washHands ? 1 : 0,
+      padsTampons ? 1 : 0,
+      shower ? 1 : 0,
       paid === null ? null : paid ? 1 : 0,
+      noToilet ? 1 : 0,
+      urinalOnly ? 1 : 0,
       comment,
       ipHash,
     ],

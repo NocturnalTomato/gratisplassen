@@ -10,8 +10,8 @@ export default function ReviewForm({
   locationId: string;
   onSubmitted: () => void;
 }) {
+  const [reportType, setReportType] = useState<"review" | "no_toilet" | "urinal_only">("review");
   const [stars, setStars] = useState(0);
-  const [cleanRating, setCleanRating] = useState(0);
   const [toiletPaper, setToiletPaper] = useState(false);
   const [washHands, setWashHands] = useState(false);
   const [padsTampons, setPadsTampons] = useState(false);
@@ -20,13 +20,14 @@ export default function ReviewForm({
   const [comment, setComment] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">("idle");
   const [error, setError] = useState("");
+  const [rateLimitMessage, setRateLimitMessage] = useState("");
   const formOpenedAt = useRef(Date.now());
   // Honeypot: dit veld staat verborgen in de UI, bots vullen het vaak toch in.
   const website = useRef("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (stars === 0) {
+    if (reportType === "review" && stars === 0) {
       setError("Kies een sterrenscore.");
       return;
     }
@@ -37,8 +38,8 @@ export default function ReviewForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          reportType,
           stars,
-          cleanRating: cleanRating || null,
           toiletPaper,
           washHands,
           padsTampons,
@@ -51,7 +52,14 @@ export default function ReviewForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Er ging iets mis.");
+        if (res.status === 429) {
+          setRateLimitMessage(
+            data.error ||
+              "Je hebt te veel reviews achtergelaten. Om misbruik te beperken mag je maar een beperkt aantal reviews per uur plaatsen. Probeer het later opnieuw."
+          );
+        } else {
+          setError(data.error || "Er ging iets mis.");
+        }
         setStatus("error");
         return;
       }
@@ -85,45 +93,66 @@ export default function ReviewForm({
         aria-hidden="true"
       />
 
-      <StarsInput value={stars} onChange={setStars} label="Algemene score" />
-      <StarsInput value={cleanRating} onChange={setCleanRating} label="Hoe schoon was het?" />
-
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={toiletPaper} onChange={(e) => setToiletPaper(e.target.checked)} />
-          WC-papier aanwezig
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={washHands} onChange={(e) => setWashHands(e.target.checked)} />
-          Handen wassen
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={padsTampons} onChange={(e) => setPadsTampons(e.target.checked)} />
-          Maandverband/tampon-automaat
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={shower} onChange={(e) => setShower(e.target.checked)} />
-          Douche aanwezig
-        </label>
-      </div>
-
       <div>
-        <label className="mb-1 block text-sm font-medium">Was het gratis?</label>
-        <div className="flex gap-3 text-sm">
+        <label className="mb-1 block text-sm font-medium">Wat wil je melden?</label>
+        <div className="flex flex-col gap-1 text-sm">
           <label className="flex items-center gap-1">
-            <input type="radio" name="paid" checked={paid === "no"} onChange={() => setPaid("no")} />
-            Gratis
+            <input type="radio" name="reportType" checked={reportType === "review"} onChange={() => setReportType("review")} />
+            Een review met score
           </label>
           <label className="flex items-center gap-1">
-            <input type="radio" name="paid" checked={paid === "yes"} onChange={() => setPaid("yes")} />
-            Betaald
+            <input type="radio" name="reportType" checked={reportType === "no_toilet"} onChange={() => setReportType("no_toilet")} />
+            Geen toilet aanwezig
           </label>
           <label className="flex items-center gap-1">
-            <input type="radio" name="paid" checked={paid === ""} onChange={() => setPaid("")} />
-            Weet ik niet
+            <input type="radio" name="reportType" checked={reportType === "urinal_only"} onChange={() => setReportType("urinal_only")} />
+            Alleen een urinoir
           </label>
         </div>
       </div>
+
+      {reportType === "review" && (
+        <>
+          <StarsInput value={stars} onChange={setStars} label="Hoe schoon was het?" />
+
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={toiletPaper} onChange={(e) => setToiletPaper(e.target.checked)} />
+              WC-papier aanwezig
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={washHands} onChange={(e) => setWashHands(e.target.checked)} />
+              Handen wassen
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={padsTampons} onChange={(e) => setPadsTampons(e.target.checked)} />
+              Maandverband/tampon-automaat
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={shower} onChange={(e) => setShower(e.target.checked)} />
+              Douche aanwezig
+            </label>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Was het gratis?</label>
+            <div className="flex gap-3 text-sm">
+              <label className="flex items-center gap-1">
+                <input type="radio" name="paid" checked={paid === "no"} onChange={() => setPaid("no")} />
+                Gratis
+              </label>
+              <label className="flex items-center gap-1">
+                <input type="radio" name="paid" checked={paid === "yes"} onChange={() => setPaid("yes")} />
+                Betaald
+              </label>
+              <label className="flex items-center gap-1">
+                <input type="radio" name="paid" checked={paid === ""} onChange={() => setPaid("")} />
+                Weet ik niet
+              </label>
+            </div>
+          </div>
+        </>
+      )}
 
       <div>
         <label className="mb-1 block text-sm font-medium">Reactie (optioneel)</label>
@@ -146,10 +175,28 @@ export default function ReviewForm({
       >
         {status === "loading" ? "Versturen…" : "Review plaatsen"}
       </button>
-      <p className="text-xs text-gray-400">
-        Geen account nodig. Max. 2 reviews per locatie en 5 per uur per IP-adres, om misbruik te
-        beperken.
-      </p>
+
+      {rateLimitMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setRateLimitMessage("")}
+        >
+          <div
+            className="max-w-sm rounded-xl bg-white p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="mb-2 font-semibold">Even geduld</h4>
+            <p className="text-sm text-gray-600">{rateLimitMessage}</p>
+            <button
+              type="button"
+              onClick={() => setRateLimitMessage("")}
+              className="mt-4 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+            >
+              Oké
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

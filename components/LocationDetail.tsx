@@ -85,7 +85,7 @@ export default function LocationDetail({
           const pct = location.stats[key] as number | null;
           return (
             <div key={String(key)} className="rounded-lg bg-gray-50 px-3 py-2">
-              {label}: {pct === null ? "?" : `${pct}%`}
+              {label}: {pct === null ? "nog geen info" : `${pct}%`}
             </div>
           );
         })}
@@ -116,7 +116,13 @@ export default function LocationDetail({
           {reviews.map((r) => (
             <li key={r.id} className="rounded-lg border border-gray-100 p-3 text-sm">
               <div className="flex items-center justify-between">
-                <StarsDisplay value={r.stars} />
+                {r.noToilet ? (
+                  <span className="font-medium text-amber-700">Geen toilet aanwezig</span>
+                ) : r.urinalOnly ? (
+                  <span className="font-medium text-amber-700">Alleen een urinoir</span>
+                ) : (
+                  <StarsDisplay value={r.stars} />
+                )}
                 <span className="text-xs text-gray-400">
                   {new Date(r.createdAt).toLocaleDateString("nl-NL")}
                 </span>
