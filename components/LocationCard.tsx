@@ -3,7 +3,7 @@ import type { LocationWithStats } from "@/lib/types";
 
 const TYPE_LABELS: Record<string, string> = {
   station: "NS-station",
-  warenhuis: "Warenhuis",
+  warenhuis: "Winkel",
   openbaar: "Openbaar toilet",
   mcdonalds: "McDonald's",
   horeca: "Horeca",

@@ -4,10 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "openbaar", label: "Openbaar toilet" },
-  { value: "station", label: "NS-station" },
-  { value: "warenhuis", label: "Warenhuis" },
-  { value: "horeca", label: "Horeca (café/restaurant)" },
-  { value: "mcdonalds", label: "McDonald's" },
+  { value: "warenhuis", label: "Winkel" },
+  { value: "horeca", label: "Horeca" },
   { value: "anders", label: "Anders" },
 ];
 
