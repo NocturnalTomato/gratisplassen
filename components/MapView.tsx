@@ -218,6 +218,7 @@ export default function MapView({
   selectedLocation,
   searchFocus,
   pinPos,
+  pinFlyTarget,
   onPinPosChange,
   onSelect,
   onBoundsChange,
@@ -228,6 +229,7 @@ export default function MapView({
   selectedLocation?: { lat: number; lon: number } | null;
   searchFocus?: SearchFocus | null;
   pinPos?: { lat: number; lon: number } | null;
+  pinFlyTarget?: { lat: number; lon: number } | null;
   onPinPosChange?: (pos: { lat: number; lon: number }) => void;
   onSelect: (loc: LocationWithStats) => void;
   onBoundsChange: (bounds: MapBounds) => void;
@@ -250,6 +252,7 @@ export default function MapView({
       <BoundsWatcher onBoundsChange={onBoundsChange} />
       {searchFocus && <FocusOnSearch focus={searchFocus} />}
       {selectedLocation && <FlyToSelected location={selectedLocation} />}
+      {pinFlyTarget && <FlyToSelected location={pinFlyTarget} />}
       {userPos && (
         <Marker position={[userPos.lat, userPos.lon]} icon={meIcon}>
           <Popup>Jouw locatie</Popup>

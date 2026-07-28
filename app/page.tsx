@@ -53,6 +53,14 @@ export default function Home() {
   const [wildplasCheck, setWildplasCheck] = useState<WildplasCheck>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [pinPos, setPinPos] = useState<{ lat: number; lon: number } | null>(null);
+  // Set only when the pin moves programmatically (address gekozen, "gebruik
+  // mijn locatie"), not on drag/click — die plek staat al in beeld, dus
+  // opnieuw pannen zou de gebruikers eigen gebaar tegenwerken.
+  const [pinFlyTarget, setPinFlyTarget] = useState<{ lat: number; lon: number } | null>(null);
+  function movePin(pos: { lat: number; lon: number }) {
+    setPinPos(pos);
+    setPinFlyTarget(pos);
+  }
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
@@ -272,6 +280,7 @@ export default function Home() {
       ? { lat: (bounds.minLat + bounds.maxLat) / 2, lon: (bounds.minLon + bounds.maxLon) / 2 }
       : { lat: 52.1326, lon: 5.2913 };
     setPinPos(userPos ?? fallback);
+    setPinFlyTarget(null);
     setShowAddForm(true);
   }
 
@@ -326,6 +335,7 @@ export default function Home() {
           selectedLocation={flyTarget}
           searchFocus={searchFocus}
           pinPos={pinPos}
+          pinFlyTarget={pinFlyTarget}
           onPinPosChange={setPinPos}
           onSelect={setSelectedLocation}
           onBoundsChange={handleBoundsChange}
@@ -481,7 +491,7 @@ export default function Home() {
               }}
               onContainerClick={(e) => e.stopPropagation()}
               pinPos={pinPos}
-              onPinPosChange={setPinPos}
+              onPinPosChange={movePin}
             />
           </div>
         </div>
