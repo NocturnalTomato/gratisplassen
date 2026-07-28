@@ -31,6 +31,6 @@ export async function GET(req: NextRequest) {
     bron: result.bron,
     uitleg: magHet
       ? "Je lijkt buiten de bebouwde kom te zijn — in de meeste gemeentes is wildplassen daar toegestaan. Doe het wel uit het zicht."
-      : "Je lijkt binnen de bebouwde kom te zijn — daar verbiedt vrijwel elke gemeente wildplassen in de APV.",
+      : "Je lijkt binnen de bebouwde kom te zijn — daar verbiedt vrijwel elke gemeente wildplassen in de APV (Algemene Plaatselijke Verordening, de gemeentelijke regels).",
   });
 }

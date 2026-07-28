@@ -7,15 +7,9 @@ export default function DonateButton() {
       target="_blank"
       rel="noopener noreferrer"
       title="Trakteer me op een bakkie koffie"
-      className="fixed bottom-[calc(14vh+1rem)] right-4 z-30 lg:bottom-4"
+      className="fixed bottom-4 right-16 z-30 flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-rose-700"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        height={36}
-        style={{ border: 0, height: 36 }}
-        src="https://storage.ko-fi.com/cdn/kofi6.png?v=6"
-        alt="Buy Me a Coffee at ko-fi.com"
-      />
+      ☕ Buy me a coffee
     </a>
   );
 }

@@ -9,6 +9,8 @@ import LocationCard from "@/components/LocationCard";
 import LocationDetail from "@/components/LocationDetail";
 import AddLocationForm from "@/components/AddLocationForm";
 import BottomSheet from "@/components/BottomSheet";
+import Legend from "@/components/Legend";
+import WelcomeModal from "@/components/WelcomeModal";
 import type { LocationWithStats } from "@/lib/types";
 import type { MapBounds, SearchFocus } from "@/components/MapView";
 
@@ -53,6 +55,11 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
   const boundsRef = useRef<MapBounds | null>(null);
+  const topBarRef = useRef<HTMLDivElement>(null);
+  // Measured (not guessed) so the list panel below it never overlaps —
+  // the top bar's height varies with viewport width (sm:p-4 padding) and
+  // with its own content (error/wildplas messages growing it).
+  const [topBarHeight, setTopBarHeight] = useState(0);
   const skipNextSuggestFetch = useRef(false);
   // Bumped on every loadLocations call so a slower, older request (e.g. the
   // unbounded fetch fired on search, before the bounds-restricted refetch it
@@ -105,16 +112,21 @@ export default function Home() {
           points: nearby.map((l) => ({ lat: l.lat, lon: l.lon })),
           key: Date.now(),
         });
-      }
 
-      const nearest = data.locations?.[0];
-      if (lat !== undefined && lon !== undefined && (!nearest || nearest.distanceMeters > 500)) {
-        fetch(`/api/wildplas-check?lat=${lat}&lon=${lon}`)
-          .then((r) => r.json())
-          .then(setWildplasCheck)
-          .catch(() => setWildplasCheck(null));
-      } else {
-        setWildplasCheck(null);
+        // Only check this on an explicit search, using its own unfiltered
+        // (bounds-free) response. A bounds-restricted reload after panning
+        // would otherwise report the nearest toilet *within the current
+        // viewport* — easily >500m even when real nearby toilets exist just
+        // outside the pan — falsely claiming none are nearby.
+        const nearest = (data.locations as LocationWithStats[] | undefined)?.[0];
+        if (!nearest || nearest.distanceMeters === null || nearest.distanceMeters > 500) {
+          fetch(`/api/wildplas-check?lat=${lat}&lon=${lon}`)
+            .then((r) => r.json())
+            .then(setWildplasCheck)
+            .catch(() => setWildplasCheck(null));
+        } else {
+          setWildplasCheck(null);
+        }
       }
     } catch {
       setErrorMsg("Kon locaties niet ophalen.");
@@ -124,6 +136,24 @@ export default function Home() {
 
   useEffect(() => {
     loadLocations();
+  }, []);
+
+  useEffect(() => {
+    const el = topBarRef.current;
+    if (!el) return;
+    const measure = () => {
+      // `entry.contentRect` excludes padding, but this wrapper's visual
+      // height (what the list panel needs to clear) includes its own
+      // p-3/sm:p-4 padding — use the rendered box height instead.
+      setTopBarHeight(el.getBoundingClientRect().height);
+    };
+    // ResizeObserver's spec-guaranteed initial callback isn't always reliable
+    // in every environment (e.g. when the viewport is set programmatically
+    // before the initial layout), so measure synchronously too.
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   function handleBoundsChange(bounds: MapBounds) {
@@ -267,11 +297,19 @@ export default function Home() {
         />
       </div>
 
+      <WelcomeModal />
+
       {/* Floating top bar */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3 sm:p-4">
+      <div
+        ref={topBarRef}
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3 sm:p-4"
+      >
         <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
+              <Legend />
+            </div>
             <button
               onClick={() => setShowAddForm(true)}
               className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 sm:text-sm"
@@ -334,7 +372,10 @@ export default function Home() {
       </div>
 
       {/* Desktop floating list panel */}
-      <div className="absolute bottom-4 left-4 top-24 z-10 hidden w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-lg lg:flex">
+      <div
+        className="absolute bottom-4 left-4 z-10 hidden w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-lg lg:flex"
+        style={{ top: topBarHeight ? topBarHeight + 16 : "6rem" }}
+      >
         <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-700">
             {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld

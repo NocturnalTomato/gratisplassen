@@ -26,7 +26,13 @@ export default function BottomSheet({
     return window.innerHeight * SNAP_VH[key];
   }
 
-  const currentHeight = dragPx ?? heightFor(snap);
+  // Avoid rendering a height computed from `window.innerHeight` on the initial
+  // paint: that value is 0 during SSR (no `window`) and React's hydration
+  // never patches a plain style-value mismatch until some other state change
+  // forces a re-render — so the sheet would sit at 0px (invisible) until the
+  // user happened to trigger one. A vh/dvh string needs no JS measurement and
+  // is identical on server and client.
+  const currentHeight = dragPx !== null ? `${dragPx}px` : `${SNAP_VH[snap] * 100}dvh`;
 
   function onDragStart(clientY: number) {
     dragStart.current = { y: clientY, heightPx: heightFor(snap) };
