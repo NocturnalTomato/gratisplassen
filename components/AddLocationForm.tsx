@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "openbaar", label: "Openbaar toilet" },
@@ -11,21 +11,28 @@ const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "anders", label: "Anders" },
 ];
 
+type AddressSuggestion = { id: string; weergavenaam: string };
+
 export default function AddLocationForm({
   onClose,
   onAdded,
   onContainerClick,
+  pinPos,
+  onPinPosChange,
 }: {
   onClose: () => void;
   onAdded: () => void;
   onContainerClick?: (e: React.MouseEvent) => void;
+  pinPos: { lat: number; lon: number } | null;
+  onPinPosChange: (pos: { lat: number; lon: number }) => void;
 }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("openbaar");
   const [address, setAddress] = useState("");
-  const [lat, setLat] = useState<number | null>(null);
-  const [lon, setLon] = useState<number | null>(null);
   const [locStatus, setLocStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const skipNextSuggestFetch = useRef(false);
   const [paid, setPaid] = useState<"" | "yes" | "no">("");
   const [priceHint, setPriceHint] = useState("");
   const [wheelchair, setWheelchair] = useState(false);
@@ -42,25 +49,58 @@ export default function AddLocationForm({
     setLocStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(pos.coords.latitude);
-        setLon(pos.coords.longitude);
+        onPinPosChange({ lat: pos.coords.latitude, lon: pos.coords.longitude });
         setLocStatus("done");
       },
       () => {
         setLocStatus("error");
-        setError("Kon je locatie niet ophalen. Typ hieronder een adres.");
+        setError("Kon je locatie niet ophalen. Typ hieronder een adres of sleep de pin op de kaart.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
-  async function geocodeFromAddress(): Promise<{ lat: number; lon: number } | null> {
-    if (!address.trim()) return null;
-    const res = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return { lat: data.lat, lon: data.lon };
+  async function selectSuggestion(suggestion: AddressSuggestion) {
+    skipNextSuggestFetch.current = true;
+    setAddress(suggestion.weergavenaam);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setLocStatus("loading");
+    try {
+      const res = await fetch(`/api/geocode/lookup?id=${encodeURIComponent(suggestion.id)}`);
+      if (!res.ok) throw new Error("niet gevonden");
+      const geo = await res.json();
+      onPinPosChange({ lat: geo.lat, lon: geo.lon });
+      setLocStatus("done");
+    } catch {
+      setLocStatus("error");
+      setError("Kon dit adres niet vinden. Probeer een preciezer adres of sleep de pin.");
+    }
   }
+
+  useEffect(() => {
+    if (skipNextSuggestFetch.current) {
+      skipNextSuggestFetch.current = false;
+      return;
+    }
+    const query = address.trim();
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/geocode/suggest?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSuggestions(data.suggestions ?? []);
+        setShowSuggestions(true);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [address]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,16 +108,9 @@ export default function AddLocationForm({
       setError("Geef een naam op.");
       return;
     }
-
-    let coords = lat !== null && lon !== null ? { lat, lon } : null;
-    if (!coords) {
-      setStatus("loading");
-      coords = await geocodeFromAddress();
-      if (!coords) {
-        setError("Kon geen locatie bepalen. Gebruik de locatieknop of typ een preciezer adres.");
-        setStatus("error");
-        return;
-      }
+    if (!pinPos) {
+      setError("Kies een locatie: sleep de pin op de kaart, gebruik je locatie of een adres.");
+      return;
     }
 
     setStatus("loading");
@@ -90,8 +123,8 @@ export default function AddLocationForm({
           name,
           type,
           address: address || null,
-          lat: coords.lat,
-          lon: coords.lon,
+          lat: pinPos.lat,
+          lon: pinPos.lon,
           paid: paid === "" ? null : paid === "yes",
           priceHint: priceHint || null,
           wheelchair,
@@ -139,7 +172,10 @@ export default function AddLocationForm({
       className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
     >
       <div className="flex items-start justify-between">
-        <h2 className="text-xl font-bold">Toilet toevoegen</h2>
+        <div>
+          <p className="text-sm font-black text-rose-600">🚽 Gratis Plassen</p>
+          <h2 className="text-xl font-bold">Toilet toevoegen</h2>
+        </div>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700" aria-label="Sluiten">
           ✕
         </button>
@@ -181,36 +217,61 @@ export default function AddLocationForm({
         </select>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium">Adres (optioneel)</label>
-        <input
-          value={address}
-          onChange={(e) => {
-            setAddress(e.target.value);
-            setLat(null);
-            setLon(null);
-            setLocStatus("idle");
-          }}
-          maxLength={200}
-          placeholder="Straat, plaats"
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
-        />
-      </div>
+      <div className="rounded-xl bg-blue-50 p-3">
+        <p className="mb-2 text-sm font-medium text-blue-900">📍 Locatie</p>
+        <p className="mb-2 text-xs text-blue-800">
+          Sleep de blauwe pin op de kaart naar de juiste plek, of gebruik je locatie / een adres
+          hieronder.
+        </p>
 
-      <div>
-        <button
-          type="button"
-          onClick={useMyLocation}
-          className="rounded-full border border-rose-300 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-        >
-          📍 Gebruik mijn huidige locatie
-        </button>
-        {locStatus === "loading" && <p className="mt-1 text-xs text-gray-400">Locatie ophalen…</p>}
-        {locStatus === "done" && lat !== null && lon !== null && (
-          <p className="mt-1 text-xs text-green-700">
-            Locatie ingesteld ({lat.toFixed(5)}, {lon.toFixed(5)})
-          </p>
-        )}
+        <div className="relative">
+          <label className="mb-1 block text-sm font-medium">Adres (optioneel)</label>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
+            maxLength={200}
+            autoComplete="off"
+            placeholder="Straat, plaats"
+            className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+              {suggestions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSuggestion(s)}
+                    className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 sm:text-sm"
+                  >
+                    {s.weergavenaam}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={useMyLocation}
+            className="rounded-full border border-rose-300 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+          >
+            📍 Gebruik mijn huidige locatie
+          </button>
+          {locStatus === "loading" && <p className="mt-1 text-xs text-gray-400">Locatie ophalen…</p>}
+          {pinPos && (
+            <p className="mt-1 text-xs text-green-700">
+              Pin staat op ({pinPos.lat.toFixed(5)}, {pinPos.lon.toFixed(5)})
+            </p>
+          )}
+        </div>
       </div>
 
       <div>

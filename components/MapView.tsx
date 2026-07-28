@@ -163,12 +163,62 @@ function ClusteredMarkers({
   return null;
 }
 
+const pickerIcon = new L.DivIcon({
+  className: "gp-pin",
+  html: `<svg width="38" height="50" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))">
+    <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="#2563eb"/>
+    <circle cx="12" cy="12" r="5.5" fill="white"/>
+  </svg>`,
+  iconSize: [38, 50],
+  iconAnchor: [19, 50],
+  popupAnchor: [0, -45],
+});
+
+// Lets the user drop the new-toilet pin anywhere by dragging the marker, or
+// by tapping/clicking the map — both update the same lat/lon back up to the
+// add-location form.
+function PinPicker({
+  pos,
+  onChange,
+}: {
+  pos: { lat: number; lon: number };
+  onChange: (pos: { lat: number; lon: number }) => void;
+}) {
+  const markerRef = useRef<L.Marker>(null);
+
+  useMapEvents({
+    click: (e) => {
+      onChange({ lat: e.latlng.lat, lon: e.latlng.lng });
+    },
+  });
+
+  return (
+    <Marker
+      position={[pos.lat, pos.lon]}
+      icon={pickerIcon}
+      draggable
+      zIndexOffset={2000}
+      ref={markerRef}
+      eventHandlers={{
+        dragend: () => {
+          const m = markerRef.current;
+          if (!m) return;
+          const ll = m.getLatLng();
+          onChange({ lat: ll.lat, lon: ll.lng });
+        },
+      }}
+    />
+  );
+}
+
 export default function MapView({
   locations,
   userPos,
   selectedId,
   selectedLocation,
   searchFocus,
+  pinPos,
+  onPinPosChange,
   onSelect,
   onBoundsChange,
 }: {
@@ -177,6 +227,8 @@ export default function MapView({
   selectedId: string | null;
   selectedLocation?: { lat: number; lon: number } | null;
   searchFocus?: SearchFocus | null;
+  pinPos?: { lat: number; lon: number } | null;
+  onPinPosChange?: (pos: { lat: number; lon: number }) => void;
   onSelect: (loc: LocationWithStats) => void;
   onBoundsChange: (bounds: MapBounds) => void;
 }) {
@@ -203,6 +255,7 @@ export default function MapView({
           <Popup>Jouw locatie</Popup>
         </Marker>
       )}
+      {pinPos && onPinPosChange && <PinPicker pos={pinPos} onChange={onPinPosChange} />}
       <ClusteredMarkers locations={locations} selectedId={selectedId} onSelect={onSelect} />
     </MapContainer>
   );

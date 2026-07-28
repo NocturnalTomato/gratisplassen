@@ -51,6 +51,7 @@ export default function Home() {
   const [manualInput, setManualInput] = useState("");
   const [wildplasCheck, setWildplasCheck] = useState<WildplasCheck>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [pinPos, setPinPos] = useState<{ lat: number; lon: number } | null>(null);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
@@ -247,6 +248,22 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [manualInput]);
 
+  // Default drop point for a new pin: the user's known location, else the
+  // middle of whatever the map is currently showing, else the NL centroid.
+  function openAddForm() {
+    const bounds = boundsRef.current;
+    const fallback = bounds
+      ? { lat: (bounds.minLat + bounds.maxLat) / 2, lon: (bounds.minLon + bounds.maxLon) / 2 }
+      : { lat: 52.1326, lon: 5.2913 };
+    setPinPos(userPos ?? fallback);
+    setShowAddForm(true);
+  }
+
+  function closeAddForm() {
+    setShowAddForm(false);
+    setPinPos(null);
+  }
+
   const selectedId = selectedLocation?.id ?? null;
 
   const flyTarget = useMemo(
@@ -292,6 +309,8 @@ export default function Home() {
           selectedId={selectedId}
           selectedLocation={flyTarget}
           searchFocus={searchFocus}
+          pinPos={pinPos}
+          onPinPosChange={setPinPos}
           onSelect={setSelectedLocation}
           onBoundsChange={handleBoundsChange}
         />
@@ -299,99 +318,105 @@ export default function Home() {
 
       <WelcomeModal />
 
-      {/* Floating top bar */}
-      <div
-        ref={topBarRef}
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3 sm:p-4"
-      >
-        <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
-              <Legend />
-            </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 sm:text-sm"
-            >
-              ➕ Toilet toevoegen
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={useMyLocation}
-              className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 sm:text-sm"
-            >
-              📍 Gebruik mijn locatie
-            </button>
-            <form onSubmit={submitManual} className="relative flex flex-1 min-w-[180px] gap-2">
-              <input
-                value={manualInput}
-                onChange={(e) => setManualInput(e.target.value)}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="of typ een adres/plaats"
-                autoComplete="off"
-                className="w-full min-w-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs sm:text-sm"
-              />
+      {/* Floating top bar — hidden while adding a pin; the form shows its
+          own logo/title instead, and the map behind must stay fully clear. */}
+      {!showAddForm && (
+        <div
+          ref={topBarRef}
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3 sm:p-4"
+        >
+          <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1 className="truncate text-base font-black text-rose-600 sm:text-lg">🚽 Gratis Plassen</h1>
+                <Legend />
+              </div>
               <button
-                type="submit"
-                className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 sm:text-sm"
+                onClick={openAddForm}
+                className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 sm:text-sm"
               >
-                Zoek
+                ➕ Toilet toevoegen
               </button>
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute left-0 right-14 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
-                  {suggestions.map((s) => (
-                    <li key={s.id}>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => selectSuggestion(s)}
-                        className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 sm:text-sm"
-                      >
-                        {s.weergavenaam}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </form>
-          </div>
-          {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
-          {wildplasCheck && (
-            <div
-              className={`rounded-lg px-3 py-2 text-xs ${
-                wildplasCheck.magWaarschijnlijk ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800"
-              }`}
-            >
-              Geen toilet vlakbij. {wildplasCheck.uitleg} (geen juridisch advies)
             </div>
-          )}
+            <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={useMyLocation}
+                  className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 sm:text-sm"
+                >
+                  📍 Gebruik mijn locatie
+                </button>
+                <form onSubmit={submitManual} className="relative flex flex-1 min-w-[180px] gap-2">
+                  <input
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="of typ een adres/plaats"
+                    autoComplete="off"
+                    className="w-full min-w-0 rounded-full border border-gray-300 px-3 py-1.5 text-xs sm:text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-full border border-rose-300 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 sm:text-sm"
+                  >
+                    Zoek
+                  </button>
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul className="absolute left-0 right-14 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                      {suggestions.map((s) => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => selectSuggestion(s)}
+                            className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 sm:text-sm"
+                          >
+                            {s.weergavenaam}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </form>
+              </div>
+              {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
+              {wildplasCheck && (
+                <div
+                  className={`rounded-lg px-3 py-2 text-xs ${
+                    wildplasCheck.magWaarschijnlijk ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  Geen toilet vlakbij. {wildplasCheck.uitleg} (geen juridisch advies)
+                </div>
+              )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Desktop floating list panel */}
-      <div
-        className="absolute bottom-4 left-4 z-10 hidden w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-lg lg:flex"
-        style={{ top: topBarHeight ? topBarHeight + 16 : "6rem" }}
-      >
-        <div className="border-b border-gray-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-700">
-            {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld
-          </h2>
+      {/* Desktop floating list panel — hidden while placing a new pin so the
+          map underneath is fully clickable/draggable. */}
+      {!showAddForm && (
+        <div
+          className="absolute bottom-4 left-4 z-10 hidden w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-lg lg:flex"
+          style={{ top: topBarHeight ? topBarHeight + 16 : "6rem" }}
+        >
+          <div className="border-b border-gray-100 px-4 py-3">
+            <h2 className="text-sm font-semibold text-gray-700">
+              {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            {list}
+            <p className="mt-3 text-center text-[11px] leading-snug text-gray-400">
+              Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter
+              plekke. Geen account nodig; anonieme reviews met beperkte snelheid.
+            </p>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-3">
-          {list}
-          <p className="mt-3 text-center text-[11px] leading-snug text-gray-400">
-            Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter
-            plekke. Geen account nodig; anonieme reviews met beperkte snelheid.
-          </p>
-        </div>
-      </div>
+      )}
 
-      {/* Mobile bottom sheet */}
-      <BottomSheet
+      {/* Mobile bottom sheet — hidden while placing a new pin, same reason. */}
+      {!showAddForm && <BottomSheet
         header={
           <h2 className="text-sm font-semibold text-gray-700">
             {locations.length} toilet{locations.length === 1 ? "" : "en"} in beeld
@@ -403,7 +428,7 @@ export default function Home() {
           Locatiedata: eigen selectie + OpenStreetMap. Reviews door bezoekers — check zelf ter
           plekke. Geen account nodig; anonieme reviews met beperkte snelheid.
         </p>
-      </BottomSheet>
+      </BottomSheet>}
 
       {selectedLocation && (
         <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setSelectedLocation(null)}>
@@ -417,12 +442,22 @@ export default function Home() {
       )}
 
       {showAddForm && (
-        <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/30 lg:items-stretch" onClick={() => setShowAddForm(false)}>
-          <AddLocationForm
-            onClose={() => setShowAddForm(false)}
-            onAdded={() => loadLocations(userPos?.lat, userPos?.lon)}
-            onContainerClick={(e) => e.stopPropagation()}
-          />
+        // No click-blocking backdrop here (unlike the detail panel above) —
+        // the map underneath must stay interactive so the pin can be
+        // dragged/tapped into place while the form is open.
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-end justify-end lg:items-stretch">
+          <div className="pointer-events-auto">
+            <AddLocationForm
+              onClose={closeAddForm}
+              onAdded={() => {
+                loadLocations(userPos?.lat, userPos?.lon);
+                setPinPos(null);
+              }}
+              onContainerClick={(e) => e.stopPropagation()}
+              pinPos={pinPos}
+              onPinPosChange={setPinPos}
+            />
+          </div>
         </div>
       )}
     </main>
