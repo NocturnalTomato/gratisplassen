@@ -49,25 +49,25 @@ export default function LocationDetail({
 
   return (
     <div
-      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl dark:bg-zinc-900 lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
       onClick={onContainerClick}
     >
-      <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-gray-300 lg:hidden" />
+      <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-gray-300 dark:bg-zinc-600 lg:hidden" />
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold">{location.name}</h2>
-          <p className="text-sm text-gray-500">{location.address}</p>
+          <h2 className="text-xl font-bold dark:text-zinc-100">{location.name}</h2>
+          <p className="text-sm text-gray-500 dark:text-zinc-400">{location.address}</p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-700" aria-label="Sluiten">
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200" aria-label="Sluiten">
           ✕
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <StarsDisplay value={location.stats.avgStars} />
-        <span className="text-sm text-gray-500">({location.stats.count} reviews)</span>
+        <span className="text-sm text-gray-500 dark:text-zinc-400">({location.stats.count} reviews)</span>
         {location.distanceMeters !== null && (
-          <span className="text-sm text-rose-600">{formatDistance(location.distanceMeters)}</span>
+          <span className="text-sm text-rose-600 dark:text-rose-400">{formatDistance(location.distanceMeters)}</span>
         )}
       </div>
 
@@ -84,7 +84,7 @@ export default function LocationDetail({
         {FACILITY_LABELS.map(([key, label]) => {
           const pct = location.stats[key] as number | null;
           return (
-            <div key={String(key)} className="rounded-lg bg-gray-50 px-3 py-2">
+            <div key={String(key)} className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-zinc-800 dark:text-zinc-200">
               {label}: {pct === null ? "nog geen info" : `${pct}%`}
             </div>
           );
@@ -92,7 +92,7 @@ export default function LocationDetail({
       </div>
 
       {location.type === "mcdonalds" && (
-        <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+        <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
           Bij ketens zoals McDonald&apos;s wisselt het per vestiging of het toilet gratis
           toegankelijk is. Check de reviews hieronder.
         </p>
@@ -107,34 +107,34 @@ export default function LocationDetail({
       />
 
       <div>
-        <h3 className="mb-2 font-semibold">Reviews</h3>
-        {loading && <p className="text-sm text-gray-400">Laden…</p>}
+        <h3 className="mb-2 font-semibold dark:text-zinc-100">Reviews</h3>
+        {loading && <p className="text-sm text-gray-400 dark:text-zinc-500">Laden…</p>}
         {!loading && reviews.length === 0 && (
-          <p className="text-sm text-gray-400">Nog geen reviews. Wees de eerste!</p>
+          <p className="text-sm text-gray-400 dark:text-zinc-500">Nog geen reviews. Wees de eerste!</p>
         )}
         <ul className="flex flex-col gap-3">
           {reviews.map((r) => (
-            <li key={r.id} className="rounded-lg border border-gray-100 p-3 text-sm">
+            <li key={r.id} className="rounded-lg border border-gray-100 p-3 text-sm dark:border-zinc-800 dark:text-zinc-200">
               <div className="flex items-center justify-between">
                 {r.noToilet ? (
-                  <span className="font-medium text-amber-700">Geen toilet aanwezig</span>
+                  <span className="font-medium text-amber-700 dark:text-amber-400">Geen toilet aanwezig</span>
                 ) : r.urinalOnly ? (
-                  <span className="font-medium text-amber-700">Alleen een urinoir</span>
+                  <span className="font-medium text-amber-700 dark:text-amber-400">Alleen een urinoir</span>
                 ) : (
                   <StarsDisplay value={r.stars} />
                 )}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-zinc-500">
                   {new Date(r.createdAt).toLocaleDateString("nl-NL")}
                 </span>
               </div>
               {r.comment && <p className="mt-1">{r.comment}</p>}
-              <div className="mt-1 flex flex-wrap gap-1 text-xs text-gray-500">
-                {r.toiletPaper && <span className="rounded-full bg-gray-100 px-2 py-0.5">WC-papier</span>}
-                {r.washHands && <span className="rounded-full bg-gray-100 px-2 py-0.5">Handen wassen</span>}
-                {r.padsTampons && <span className="rounded-full bg-gray-100 px-2 py-0.5">Maandverband</span>}
-                {r.shower && <span className="rounded-full bg-gray-100 px-2 py-0.5">Douche</span>}
+              <div className="mt-1 flex flex-wrap gap-1 text-xs text-gray-500 dark:text-zinc-400">
+                {r.toiletPaper && <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-zinc-800">WC-papier</span>}
+                {r.washHands && <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-zinc-800">Handen wassen</span>}
+                {r.padsTampons && <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-zinc-800">Maandverband</span>}
+                {r.shower && <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-zinc-800">Douche</span>}
                 {r.paid !== null && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5">
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-zinc-800">
                     {r.paid ? "Betaald" : "Gratis"}
                   </span>
                 )}

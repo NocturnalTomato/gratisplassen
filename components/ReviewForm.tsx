@@ -73,15 +73,15 @@ export default function ReviewForm({
 
   if (status === "done") {
     return (
-      <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+      <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
         Bedankt voor je review!
       </p>
     );
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4">
-      <h3 className="font-semibold">Laat een review achter</h3>
+    <form onSubmit={submit} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+      <h3 className="font-semibold dark:text-zinc-100">Laat een review achter</h3>
 
       {/* Honeypot — onzichtbaar voor mensen */}
       <input
@@ -94,7 +94,7 @@ export default function ReviewForm({
       />
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Wat wil je melden?</label>
+        <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Wat wil je melden?</label>
         <div className="flex flex-col gap-1 text-sm">
           <label className="flex items-center gap-1">
             <input type="radio" name="reportType" checked={reportType === "review"} onChange={() => setReportType("review")} />
@@ -135,7 +135,7 @@ export default function ReviewForm({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Was het gratis?</label>
+            <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Was het gratis?</label>
             <div className="flex gap-3 text-sm">
               <label className="flex items-center gap-1">
                 <input type="radio" name="paid" checked={paid === "no"} onChange={() => setPaid("no")} />
@@ -155,18 +155,18 @@ export default function ReviewForm({
       )}
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Reactie (optioneel)</label>
+        <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Reactie (optioneel)</label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           maxLength={500}
           rows={3}
           placeholder='Bijv. "was heel vies" of "kon er ook douchen en mijn handen wassen"'
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <button
         type="submit"
@@ -182,11 +182,11 @@ export default function ReviewForm({
           onClick={() => setRateLimitMessage("")}
         >
           <div
-            className="max-w-sm rounded-xl bg-white p-5 shadow-lg"
+            className="max-w-sm rounded-xl bg-white p-5 shadow-lg dark:bg-zinc-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <h4 className="mb-2 font-semibold">Even geduld</h4>
-            <p className="text-sm text-gray-600">{rateLimitMessage}</p>
+            <h4 className="mb-2 font-semibold dark:text-zinc-100">Even geduld</h4>
+            <p className="text-sm text-gray-600 dark:text-zinc-300">{rateLimitMessage}</p>
             <button
               type="button"
               onClick={() => setRateLimitMessage("")}

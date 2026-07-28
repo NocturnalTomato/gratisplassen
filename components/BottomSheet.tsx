@@ -67,7 +67,7 @@ export default function BottomSheet({
 
   return (
     <div
-      className="absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.15)] lg:hidden"
+      className="absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.15)] dark:bg-zinc-900 lg:hidden"
       style={{ height: currentHeight, transition: dragPx === null ? "height 0.25s ease" : "none" }}
     >
       <button
@@ -85,7 +85,7 @@ export default function BottomSheet({
         onPointerUp={onDragEnd}
         onPointerCancel={onDragEnd}
       >
-        <span className="h-1.5 w-10 rounded-full bg-gray-300" />
+        <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-zinc-600" />
       </button>
       <div className="shrink-0 px-4 pb-2">{header}</div>
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{children}</div>

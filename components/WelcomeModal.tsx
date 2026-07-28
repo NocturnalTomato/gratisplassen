@@ -26,15 +26,15 @@ export default function WelcomeModal() {
       onClick={dismiss}
     >
       <div
-        className="flex max-w-sm flex-col gap-3 rounded-3xl bg-white p-5 text-center shadow-xl"
+        className="flex max-w-sm flex-col gap-3 rounded-3xl bg-white p-5 text-center shadow-xl dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-rose-600">🚽 Welkom bij Gratis Plassen!</h2>
-        <p className="text-sm text-gray-600">
+        <h2 className="text-lg font-bold text-rose-600 dark:text-rose-400">🚽 Welkom bij Gratis Plassen!</h2>
+        <p className="text-sm text-gray-600 dark:text-zinc-300">
           Deze kaart laat zien waar je gratis (of goedkoop) naar een echt toilet kunt — geen
           urinoir. Voeg zelf toiletten toe en laat reviews achter over schoonheid en voorzieningen.
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-zinc-300">
           Hoe meer mensen toiletten toevoegen en feedback geven, hoe beter deze website voor
           iedereen werkt. Op naar een vrije plassamenleving! 🎉
         </p>

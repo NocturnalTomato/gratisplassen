@@ -58,10 +58,20 @@ export async function GET(req: NextRequest) {
     .filter((l) => !l.stats.hidden)
     .filter((l) => !hideUrinals || !l.stats.isUrinalOnly);
 
-  withStats.sort((a, b) => {
-    if (a.distanceMeters === null || b.distanceMeters === null) return 0;
-    return a.distanceMeters - b.distanceMeters;
-  });
+  if (userLat !== null && userLon !== null) {
+    withStats.sort((a, b) => {
+      if (a.distanceMeters === null || b.distanceMeters === null) return 0;
+      return a.distanceMeters - b.distanceMeters;
+    });
+  } else {
+    // Zonder gebruikerslocatie is er geen zinvolle sortering — schud de
+    // volgorde zodat niet steeds hetzelfde toilet bovenaan (en dus vaker
+    // bekeken/beoordeeld) terechtkomt.
+    for (let i = withStats.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [withStats[i], withStats[j]] = [withStats[j], withStats[i]];
+    }
+  }
 
   return NextResponse.json({ locations: withStats });
 }

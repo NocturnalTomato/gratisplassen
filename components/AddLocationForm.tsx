@@ -147,10 +147,10 @@ export default function AddLocationForm({
   if (status === "done") {
     return (
       <div
-        className="flex h-full max-h-[90vh] w-full flex-col items-center justify-center gap-3 rounded-t-3xl bg-white p-4 text-center shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+        className="flex h-full max-h-[90vh] w-full flex-col items-center justify-center gap-3 rounded-t-3xl bg-white p-4 text-center shadow-xl dark:bg-zinc-900 lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
         onClick={onContainerClick}
       >
-        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
           Bedankt! Het toilet is toegevoegd.
         </p>
         <button
@@ -167,14 +167,14 @@ export default function AddLocationForm({
     <form
       onSubmit={submit}
       onClick={onContainerClick}
-      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
+      className="flex h-full max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl dark:bg-zinc-900 lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none"
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-black text-rose-600">🚽 Gratis Plassen</p>
-          <h2 className="text-xl font-bold">Toilet toevoegen</h2>
+          <p className="text-sm font-black text-rose-600 dark:text-rose-400">🚽 Gratis Plassen</p>
+          <h2 className="text-xl font-bold dark:text-zinc-100">Toilet toevoegen</h2>
         </div>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700" aria-label="Sluiten">
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200" aria-label="Sluiten">
           ✕
         </button>
       </div>
@@ -190,22 +190,22 @@ export default function AddLocationForm({
       />
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Naam</label>
+        <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Naam</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={120}
           placeholder='Bijv. "Openbaar toilet Museumplein"'
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Type</label>
+        <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Type</label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+          className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           {TYPE_OPTIONS.map((t) => (
             <option key={t.value} value={t.value}>
@@ -215,15 +215,15 @@ export default function AddLocationForm({
         </select>
       </div>
 
-      <div className="rounded-xl bg-blue-50 p-3">
-        <p className="mb-2 text-sm font-medium text-blue-900">📍 Locatie</p>
-        <p className="mb-2 text-xs text-blue-800">
+      <div className="rounded-xl bg-blue-50 p-3 dark:bg-blue-950/40">
+        <p className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-200">📍 Locatie</p>
+        <p className="mb-2 text-xs text-blue-800 dark:text-blue-300">
           Sleep de blauwe pin op de kaart naar de juiste plek, of gebruik je locatie / een adres
           hieronder.
         </p>
 
         <div className="relative">
-          <label className="mb-1 block text-sm font-medium">Adres (optioneel)</label>
+          <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Adres (optioneel)</label>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -235,17 +235,17 @@ export default function AddLocationForm({
             maxLength={200}
             autoComplete="off"
             placeholder="Straat, plaats"
-            className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+            className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           />
           {showSuggestions && suggestions.length > 0 && (
-            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
               {suggestions.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectSuggestion(s)}
-                    className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 sm:text-sm"
+                    className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-rose-50 dark:text-zinc-100 dark:hover:bg-zinc-700 sm:text-sm"
                   >
                     {s.weergavenaam}
                   </button>
@@ -259,13 +259,13 @@ export default function AddLocationForm({
           <button
             type="button"
             onClick={useMyLocation}
-            className="rounded-full border border-rose-300 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+            className="rounded-full border border-rose-300 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:bg-zinc-800 dark:text-rose-300 dark:hover:bg-zinc-700"
           >
             📍 Gebruik mijn huidige locatie
           </button>
-          {locStatus === "loading" && <p className="mt-1 text-xs text-gray-400">Locatie ophalen…</p>}
+          {locStatus === "loading" && <p className="mt-1 text-xs text-gray-400 dark:text-zinc-500">Locatie ophalen…</p>}
           {pinPos && (
-            <p className="mt-1 text-xs text-green-700">
+            <p className="mt-1 text-xs text-green-700 dark:text-green-400">
               Pin staat op ({pinPos.lat.toFixed(5)}, {pinPos.lon.toFixed(5)})
             </p>
           )}
@@ -273,7 +273,7 @@ export default function AddLocationForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Is het gratis?</label>
+        <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Is het gratis?</label>
         <div className="flex gap-3 text-sm">
           <label className="flex items-center gap-1">
             <input type="radio" name="add-paid" checked={paid === "no"} onChange={() => setPaid("no")} />
@@ -292,13 +292,13 @@ export default function AddLocationForm({
 
       {paid === "yes" && (
         <div>
-          <label className="mb-1 block text-sm font-medium">Prijsindicatie (optioneel)</label>
+          <label className="mb-1 block text-sm font-medium dark:text-zinc-200">Prijsindicatie (optioneel)</label>
           <input
             value={priceHint}
             onChange={(e) => setPriceHint(e.target.value)}
             maxLength={40}
             placeholder="Bijv. ~€0,50"
-            className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+            className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           />
         </div>
       )}
@@ -308,7 +308,7 @@ export default function AddLocationForm({
         Rolstoeltoegankelijk
       </label>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <button
         type="submit"
@@ -317,7 +317,7 @@ export default function AddLocationForm({
       >
         {status === "loading" ? "Toevoegen…" : "Toilet toevoegen"}
       </button>
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-400 dark:text-zinc-500">
         Geen account nodig. Max. 5 locaties per uur en 15 per dag per IP-adres, om misbruik te
         beperken.
       </p>

@@ -7,8 +7,7 @@ const DONATE_URL = process.env.NEXT_PUBLIC_DONATE_URL || "https://ko-fi.com/F8F7
 // Phone/tablet-only counterpart to DonateButton's floating desktop button —
 // there's no free floating corner on a small screen (the bottom sheet owns
 // the bottom, the top bar owns the top), so on mobile the coffee action
-// lives in the title row instead, in the slot the icon-only Legend vacates
-// there (see Legend.tsx).
+// lives in the title row instead.
 export default function CoffeeMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -29,17 +28,17 @@ export default function CoffeeMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="Steun deze site"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-zinc-800 dark:text-rose-300 dark:hover:bg-zinc-700"
       >
         <CoffeeIcon className="h-[18px] w-[18px]" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-xl bg-white p-1.5 text-sm shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-xl bg-white p-1.5 text-sm shadow-lg dark:bg-zinc-800">
           <a
             href={DONATE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-rose-600 hover:bg-rose-50"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-zinc-700"
             onClick={() => setOpen(false)}
           >
             <CoffeeIcon className="h-4 w-4 shrink-0" />

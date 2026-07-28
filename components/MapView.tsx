@@ -92,10 +92,14 @@ export type SearchFocus = {
   lon: number;
   points: { lat: number; lon: number }[];
   key: number;
+  // Aanwezig wanneer de zoekopdracht een gebied betreft (plaats, gemeente,
+  // provincie, land) i.p.v. een punt — dan zoomt de kaart op dit gebied in
+  // plaats van op de dichtstbijzijnde toiletten.
+  bbox?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 };
 
 // Zooms to fit the toilets closest to a searched/located point after "Gebruik
-// mijn locatie" or an address search. `points` is already limited (by the
+// mijn locatie" of een adreszoekopdracht. `points` is already limited (by the
 // caller) to the nearest ones within a bikeable radius, so fitting bounds to
 // them naturally caps how far out the map zooms — it only zooms in tighter
 // when those points are close together.
@@ -103,6 +107,17 @@ function FocusOnSearch({ focus }: { focus: SearchFocus | null }) {
   const map = useMap();
   useEffect(() => {
     if (!focus) return;
+    if (focus.bbox) {
+      const bounds = L.latLngBounds(
+        [focus.bbox.minLat, focus.bbox.minLon],
+        [focus.bbox.maxLat, focus.bbox.maxLon]
+      );
+      // Geen maxZoom hier — een plaats/dorp mag verder inzoomen dan het
+      // puntenzoekpad hierboven, en een provincie/land moet juist ver
+      // kunnen uitzoomen.
+      map.fitBounds(bounds, { padding: [20, 20] });
+      return;
+    }
     if (focus.points.length === 0) {
       map.setView([focus.lat, focus.lon], 14);
       return;
