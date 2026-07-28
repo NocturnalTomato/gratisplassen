@@ -56,6 +56,9 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
+  // Standaard aan: locaties die door genoeg meldingen als "alleen urinoir"
+  // gezien worden, blijven verborgen totdat de gebruiker dit uitzet.
+  const [filterUrinals, setFilterUrinals] = useState(true);
   const boundsRef = useRef<MapBounds | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
   // Measured (not guessed) so the list panel below it never overlaps —
@@ -89,6 +92,7 @@ export default function Home() {
         params.set("minLon", String(bounds.minLon));
         params.set("maxLon", String(bounds.maxLon));
       }
+      params.set("hideUrinals", filterUrinals ? "1" : "0");
       const query = params.toString();
       const url = query ? `/api/locations?${query}` : "/api/locations";
       const res = await fetch(url);
@@ -138,7 +142,18 @@ export default function Home() {
 
   useEffect(() => {
     loadLocations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const isFirstFilterRender = useRef(true);
+  useEffect(() => {
+    if (isFirstFilterRender.current) {
+      isFirstFilterRender.current = false;
+      return;
+    }
+    loadLocations(userPos?.lat, userPos?.lon);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterUrinals]);
 
   useEffect(() => {
     const el = topBarRef.current;
@@ -381,6 +396,14 @@ export default function Home() {
                     </ul>
                   )}
                 </form>
+                <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-600 sm:text-sm">
+                  <input
+                    type="checkbox"
+                    checked={filterUrinals}
+                    onChange={(e) => setFilterUrinals(e.target.checked)}
+                  />
+                  Filter urinoirs
+                </label>
               </div>
               {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
               {wildplasCheck && (

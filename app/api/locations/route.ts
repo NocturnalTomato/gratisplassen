@@ -23,6 +23,9 @@ export async function GET(req: NextRequest) {
   const userLat = lat ? parseFloat(lat) : null;
   const userLon = lon ? parseFloat(lon) : null;
   const bounds = parseBounds(searchParams);
+  // Default aan: locaties die als "alleen urinoir" geflagd zijn worden
+  // verborgen tenzij de client expliciet ?hideUrinals=0 meestuurt.
+  const hideUrinals = searchParams.get("hideUrinals") !== "0";
 
   const allLocations = await getAllLocations();
   // Als de kaart een viewport doorgeeft, beperken we tot die bbox — anders
@@ -39,14 +42,21 @@ export async function GET(req: NextRequest) {
     : allLocations;
   const stats = await getStatsForLocations(all.map((l) => l.id));
 
-  const withStats: LocationWithStats[] = all.map((l) => ({
-    ...l,
-    distanceMeters:
-      userLat !== null && userLon !== null
-        ? Math.round(distanceMeters(userLat, userLon, l.lat, l.lon))
-        : null,
-    stats: stats.get(l.id)!,
-  }));
+  const withStats: LocationWithStats[] = all
+    .map((l) => ({
+      ...l,
+      distanceMeters:
+        userLat !== null && userLon !== null
+          ? Math.round(distanceMeters(userLat, userLon, l.lat, l.lon))
+          : null,
+      stats: stats.get(l.id)!,
+    }))
+    // Locaties met genoeg "geen toilet"-meldingen tonen we nooit meer — een
+    // nieuwe toevoeging op dezelfde plek is dan gewoon een aparte,
+    // losstaande locatie (geen dubbele-melding-check nodig). "Alleen
+    // urinoir"-locaties blijven bestaan en zijn optioneel filterbaar.
+    .filter((l) => !l.stats.hidden)
+    .filter((l) => !hideUrinals || !l.stats.isUrinalOnly);
 
   withStats.sort((a, b) => {
     if (a.distanceMeters === null || b.distanceMeters === null) return 0;
